@@ -1,0 +1,16 @@
+# ignore everything
+*
+
+# allow specific file types
+!*.c
+!*.cpp
+!*.h
+!*.hpp
+!*.sh
+!*.md
+!*.csv
+
+!Makefile
+
+# allow directories
+!*/
