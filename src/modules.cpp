@@ -7,7 +7,7 @@
 
 #include "request.h"
 #include "result.h"
-#include "../include/modules.hpp"
+#include "modules.hpp"
 
 struct Result run_simulation (
 uint32_t cycles,
@@ -30,15 +30,15 @@ struct Request* requests
     sc_signal<int> result;
 
     // initialize cache and main_memory
-    ADDER adder("adder");
+    //ADDER adder("adder");
 
     // bind
-    adder.clk.bind(clk);
-    adder.sum.bind(result);
+    //adder.clk.bind(clk);
+    //adder.sum.bind(result);
 
     // start simulation
     sc_start(5, SC_SEC); //
-    return result.read();
+    return {0, 0, 0, 0};
 }
 
 int sc_main(int argc, char* argv[])

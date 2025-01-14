@@ -38,10 +38,6 @@ SC_MODULE(LAYER) {
             }
         }
     }
-
-    uint8_t getCacheLineContent(uint32_t level, uint32_t lineIndex, uint32_t index) {
-        // returns byte in cache-level level and cache-line lineIndex at offset index
-    }
 };
 
 #endif //LAYER_HPP
