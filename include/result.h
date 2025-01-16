@@ -6,13 +6,13 @@
 extern "C" {
 #endif
 
-#include <stdio.h>
+#include <stdint.h>
 
     struct Result {
-        size_t cycles;
-        size_t misses;
-        size_t hits;
-        size_t primitiveGateCount;
+        uint32_t cycles;
+        uint32_t misses;
+        uint32_t hits;
+        uint32_t primitiveGateCount;
     };
 
 #ifdef __cplusplus

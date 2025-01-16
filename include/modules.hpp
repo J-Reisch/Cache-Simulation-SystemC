@@ -12,24 +12,7 @@
 
 using namespace sc_core;
 
-extern "C" struct Result run_simulation (uint32_t cycles, const char* tracefile, uint8_t numCacheLevels, uint32_t cachelineSize, uint32_t numLinesL1, uint32_t numLinesL2, uint32_t numLinesL3, uint32_t latencyCacheL1, uint32_t latencyCacheL2, uint32_t latencyCacheL3, uint8_t mappingStrategy, uint32_t numRequests, struct Request* requests);
-
-struct Result run_simulation (
-    uint32_t cycles ,
-    const char* tracefile ,
-    uint8_t numCacheLevels ,
-    uint32_t cachelineSize ,
-    uint32_t numLinesL1 ,
-    uint32_t numLinesL2 ,
-    uint32_t numLinesL3 ,
-    uint32_t latencyCacheL1 ,
-    uint32_t latencyCacheL2 ,
-    uint32_t latencyCacheL3 ,
-    uint8_t mappingStrategy ,
-    uint32_t numRequests ,
-    struct Request* requests
-);
-
+extern "C" struct Result run_simulation (uint32_t cycles, const char* tracefile, uint8_t numCacheLevels, uint32_t cachelineSize, uint32_t numLinesL1, uint32_t numLinesL2, uint32_t numLinesL3, uint32_t latencyCacheL1, uint32_t latencyCacheL2, uint32_t latencyCacheL3, uint8_t mappingStrategy, uint32_t numRequests, struct Request* requests, uint32_t memoryLatency, uint32_t numLinesPerSet);
 
 SC_MODULE(CACHE) {
     sc_in<bool> clk;
@@ -47,22 +30,35 @@ SC_MODULE(CACHE) {
     sc_out<bool> mem_r;
     sc_out<bool> mem_w;
 
-    SC_CTOR(CACHE) { // add parameters
+    SC_CTOR(CACHE) { // TODO: add parameters
         SC_THREAD(behaviour);
         sensitive << clk.pos();
+        // TODO: initialize signals
     }
 
     void behaviour() {
         while(true) {
-            wait();
+            std::cout << "Triggered at time: " << sc_time_stamp() << std::endl;
 
             if (r.read()) {
-                  // set ready to 0
+              ready.write(0);
+              for (uint32_t i = 0; i < 3; i++) {
+                wait();
+              }
                 // read from cache
+
+             	// ready
+              ready.write(1);
             } else if (w.read()) {
-                // set ready to 0
+                ready.write(0);
                 // write to cache
+              for (uint32_t i = 0; i < 5; i++) {
+                wait();
+              }
+             	// ready
+              ready.write(1);
             }
+            wait(); // necessary???
         }
     }
 

@@ -35,9 +35,9 @@ struct Request* parse_csv(const char* filename, int* numRequests) {
             exit(1);
         }
         if (strcmp(token, "R") == 0) {
-            request.we = 0;
+            request.w = 0;
         } else if (strcmp(token, "W") == 0) {
-            request.we = 1;
+            request.w = 1;
         } else {
             fprintf(stderr, "Invalid format: Invalid operation type\n");
             free(requests);
@@ -58,13 +58,13 @@ struct Request* parse_csv(const char* filename, int* numRequests) {
         // Parse data
         token = strtok(NULL, ",");
         // if it is a write request, data is required
-        if (request.we == 1 && token == NULL) {
+        if (request.w == 1 && token == NULL) {
             fprintf(stderr, "Invalid format: Missing data\n");
             free(requests);
             fclose(file);
             exit(1);
         }
-        if (request.we == 1) {
+        if (request.w == 1) {
             request.data = strtoul(token, NULL, 0);
         } else {
             request.data = 0;
@@ -72,7 +72,7 @@ struct Request* parse_csv(const char* filename, int* numRequests) {
 
         // if it is a read request, data has to be 0
         // empty string is also considered as 0
-        if (request.we == 0 && (token != NULL && strcmp(token, "") == 0)) {
+        if (request.w == 0 && (token != NULL && strcmp(token, "") == 0)) {
             fprintf(stderr, "Invalid format: Data has to be 0 for read requests\n");
             free(requests);
             fclose(file);

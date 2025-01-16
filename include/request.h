@@ -11,7 +11,7 @@ extern "C" {
     struct Request {
         uint32_t addr;
         uint32_t data;
-        int we;
+        uint8_t w;
     };
 
 #ifdef __cplusplus
