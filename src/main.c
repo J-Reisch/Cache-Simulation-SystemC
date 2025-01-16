@@ -31,7 +31,7 @@ void print_help(const char* programName) {
           "  -m, --mapping-strategy <num>    Mapping strategy (0-2)\n" // TODO: better explanation?
           "  -c, --cycles <num>              The number of simulated cycles\n"
           "  -t, --tf <tracefile>            Path to the trace file (no tracefile if the option is not set)\n"
-          "  -l, --memory-latency <num>      The latency for RAM (equal for read and write)\n" // TODO: does this param make sense?
+          "  -l, --memory-latency <num>      The latency for RAM (equal for read and write)\n"
           "  -p, --num-lines-per-set <num>      For set-associative caches only\n" // TODO: one parameter per layer?
           "  -h, --help                      Print this help message and exit"
           "  --test                          Run tests and exit\n";

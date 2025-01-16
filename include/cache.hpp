@@ -8,11 +8,7 @@
 #include <systemc>
 #include <cstdint>
 
-#define MACRO 3333
-
 using namespace sc_core;
-
-extern "C" struct Result run_simulation (uint32_t cycles, const char* tracefile, uint8_t numCacheLevels, uint32_t cachelineSize, uint32_t numLinesL1, uint32_t numLinesL2, uint32_t numLinesL3, uint32_t latencyCacheL1, uint32_t latencyCacheL2, uint32_t latencyCacheL3, uint8_t mappingStrategy, uint32_t numRequests, struct Request* requests, uint32_t memoryLatency, uint32_t numLinesPerSet);
 
 SC_MODULE(CACHE) {
     sc_in<bool> clk;
@@ -30,10 +26,25 @@ SC_MODULE(CACHE) {
     sc_out<bool> mem_r;
     sc_out<bool> mem_w;
 
-    SC_CTOR(CACHE) { // TODO: add parameters
+    SC_HAS_PROCESS(CACHE);
+    CACHE (sc_module_name name, uint8_t numCacheLevels, uint32_t cacheLineSize, uint32_t numLinesL1, uint32_t numLinesL2, uint32_t numLinesL3, uint32_t latencyCacheL1, uint32_t latencyCacheL2, uint32_t latencyCacheL3, uint8_t mappingStrategy, uint32_t numLinesPerSet) {
+      std::cout << "------ CACHE created ------\ncache levels: " << (int)numCacheLevels << "\ncache line size: " << cacheLineSize << "\nnumLinesL1: " << numLinesL1 << "\nlatencyCacheL1: " << latencyCacheL1 << "\nmapping strategy: " << (int)mappingStrategy << "\nlines per set: " << numLinesPerSet << "\n------------------" << std::endl;
+    	// TODO: different for each cache layer in case of fully associative
+    	// direct-mapped caches have one line per set, fully associative caches have only one set
+
+        /*
+
+        if (mappingStrategy == 0) { // direct-mapped
+      		numLinesPerSet = 1;
+    	} else if (mappingStrategy == 1) { // fully associative
+         	numLinesPerSet = cachelineSize;
+    	}
+         */
+
+    	// TODO: initialize signals
+
         SC_THREAD(behaviour);
         sensitive << clk.pos();
-        // TODO: initialize signals
     }
 
     void behaviour() {

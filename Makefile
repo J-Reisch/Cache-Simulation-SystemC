@@ -4,7 +4,7 @@
 
 # Entry point for the program and target name
 C_SRCS = src/main.c src/csv_parser.c
-CPP_SRCS = src/modules.cpp
+CPP_SRCS = src/simulation.cpp
 
 # Object files
 C_OBJS = $(C_SRCS:.c=.o)

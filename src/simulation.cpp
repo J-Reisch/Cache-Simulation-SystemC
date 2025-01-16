@@ -7,8 +7,9 @@
 
 #include "request.h"
 #include "result.h"
-#include "modules.hpp"
+#include "cache.hpp"
 #include "main_memory.hpp"
+#include "simulation.hpp"
 
 void clock_tick(sc_signal<bool> *clk, uint32_t *cycleCount) {
      clk->write(1);
@@ -52,18 +53,9 @@ uint32_t numLinesPerSet
     sc_signal<bool> mem_r;
     sc_signal<bool> mem_w;
 
-    // TODO: add parameters to constructor of CACHE
-    // TODO: different for each cache layer in case of fully associative
-    // direct-mapped caches have one line per set, fully associative caches have only one set
-    if (mappingStrategy == 0) { // direct-mapped
-      numLinesPerSet = 1;
-    } else if (mappingStrategy == 1) { // fully associative
-         numLinesPerSet = cachelineSize;
-    }
-
     // initialize cache and main_memory
-    CACHE cache("cache");
-    MAIN_MEMORY mainMemory("main_memory");
+    CACHE cache("cache", numCacheLevels, cachelineSize, numLinesL1, numLinesL2, numLinesL3, latencyCacheL1, latencyCacheL2, latencyCacheL3, mappingStrategy, numLinesPerSet);
+    MAIN_MEMORY mainMemory("main_memory", memoryLatency);
 
     // bind cache ports
     cache.clk.bind(clk);
@@ -90,7 +82,6 @@ uint32_t numLinesPerSet
 
     mainMemory.rdata.bind(mem_rdata);
     mainMemory.ready.bind(mem_ready);
-
 
     uint32_t cycleCount = 0;
     Request current;

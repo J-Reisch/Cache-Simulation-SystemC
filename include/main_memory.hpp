@@ -3,7 +3,7 @@
 //
 
 /*
-This is the example solution of the MAIN_MEMORY homework which is used to test the cache
+adapted version of the example solution of the MAIN_MEMORY homework which is used to test the cache
  */
 
 #ifndef MAIN_MEMORY_HPP
@@ -12,8 +12,6 @@ This is the example solution of the MAIN_MEMORY homework which is used to test t
 #include <systemc>
 #include <map>
 using namespace sc_core;
-
-#define LATENCY 100
 
 SC_MODULE(MAIN_MEMORY) {
     sc_in<bool> clk;
@@ -26,12 +24,17 @@ SC_MODULE(MAIN_MEMORY) {
     sc_out<uint32_t> rdata;
     sc_out<bool> ready;
 
+   	uint32_t latency;
+
     std::map<uint32_t, uint8_t> memory;
 
-    SC_CTOR(MAIN_MEMORY) {
-        SC_THREAD(behaviour);
+    SC_HAS_PROCESS(MAIN_MEMORY);
+    MAIN_MEMORY (sc_module_name name, uint32_t memoryLatency) {
+      	latency = memoryLatency;
+
+		SC_THREAD(behaviour);
         sensitive << clk.pos();
-    }
+	}
 
     void behaviour() {
         while(true) {
@@ -50,7 +53,7 @@ SC_MODULE(MAIN_MEMORY) {
 
         uint32_t result = get(addr.read());
 
-        for(int i = 0; i < LATENCY; i++) {
+        for(int i = 0; i < latency; i++) {
             wait();
         }
 
@@ -62,7 +65,7 @@ SC_MODULE(MAIN_MEMORY) {
         ready.write(false);
         set(addr.read(), wdata.read());
 
-        for(int i = 0; i < LATENCY; i++) {
+        for(int i = 0; i < latency; i++) {
             wait();
         }
 
