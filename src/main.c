@@ -32,7 +32,7 @@ void print_help(const char* programName) {
           "  -c, --cycles <num>              The number of simulated cycles\n"
           "  -t, --tf <tracefile>            Path to the trace file (no tracefile if the option is not set)\n"
           "  -l, --memory-latency <num>      The latency for RAM (equal for read and write)\n"
-          "  -p, --num-lines-per-set <num>      For set-associative caches only\n" // TODO: one parameter per layer?
+          "  -p, --num-lines-per-set <num>   For set-associative caches only\n" // TODO: one parameter per layer?
           "  -h, --help                      Print this help message and exit"
           "  --test                          Run tests and exit\n";
 
@@ -229,6 +229,8 @@ printf("before tracefile\n");
             }
         }
     }
+
+    // TODO: check if number of lines can be divided by numLinesPerSet for each layer
 
     // TODO: Check if cache is large enough and if all values make sense
 

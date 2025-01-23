@@ -11,6 +11,7 @@
 #include "main_memory.hpp"
 #include "simulation.hpp"
 
+
 void clock_tick(sc_signal<bool> *clk, uint32_t *cycleCount) {
      clk->write(1);
      sc_start(1, SC_NS);
@@ -86,6 +87,7 @@ uint32_t numLinesPerSet
     uint32_t cycleCount = 0;
     Request current;
     // process requests
+
     for (int i = 0; i < numRequests; i++) {
      	current = requests[i];
         std::cout << "Request " << i << ": " << (current.w ? "write" : "read") << std::endl;
@@ -96,12 +98,10 @@ uint32_t numLinesPerSet
         w.write(current.w == 1);
         r.write(current.w != 1);
 
-
-        // clock tick
+        // wait until cache is done
         do {
         	clock_tick(&clk, &cycleCount);
 
-            std::cout << ready.read() << std::endl;
             if (cycleCount >= cycles) {
           		break;
         	}

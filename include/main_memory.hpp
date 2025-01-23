@@ -29,71 +29,17 @@ SC_MODULE(MAIN_MEMORY) {
     std::map<uint32_t, uint8_t> memory;
 
     SC_HAS_PROCESS(MAIN_MEMORY);
-    MAIN_MEMORY (sc_module_name name, uint32_t memoryLatency) {
-      	latency = memoryLatency;
+    MAIN_MEMORY (sc_module_name name, uint32_t memoryLatency);
 
-		SC_THREAD(behaviour);
-        sensitive << clk.pos();
-	}
+    void behaviour();
 
-    void behaviour() {
-        while(true) {
-            wait();
+    void doRead();
 
-            if (r.read()) {
-                doRead();
-            } else if (w.read()) {
-                doWrite();
-            }
-        }
-    }
+    void doWrite();
 
-    void doRead() {
-        ready.write(false);
+    uint32_t get(uint32_t address);
 
-        uint32_t result = get(addr.read());
-
-        for(int i = 0; i < latency; i++) {
-            wait();
-        }
-
-        rdata.write(result);
-        ready.write(true);
-    }
-
-    void doWrite() {
-        ready.write(false);
-        set(addr.read(), wdata.read());
-
-        for(int i = 0; i < latency; i++) {
-            wait();
-        }
-
-        ready.write(true);
-    }
-
-    uint32_t get(uint32_t address) {
-        uint32_t result = 0;
-
-        for (int i = 0; i < 4; i++) {
-            uint8_t value = 0;
-            if(memory.find(address + i) != memory.end()) {
-                value = memory[address + i];
-            }
-            result |= value << (i * 8);
-        }
-
-        return result;
-    }
-
-    void set(uint32_t address, uint32_t value) {
-        for (int i = 0; i < 4; i++) {
-            memory[address + i] = (value >> (i * 8)) & 0xFF;
-            if(address + i == UINT32_MAX) {
-                break;
-            }
-        }
-    }
+    void set(uint32_t address, uint32_t value);
 };
 
 #endif // MAIN_MEMORY_HPP
