@@ -68,7 +68,7 @@ int main(int argc, char *argv[]) {
     uint32_t cacheLineSize = 16;
     uint32_t numLinesL1 = 16, numLinesL2 = 32, numLinesL3 = 64;
     uint32_t latencyCacheL1 = 4, latencyCacheL2 = 8, latencyCacheL3 = 16;
-    uint8_t mappingStrategy = 1;
+    uint8_t mappingStrategy = 2; // 0 = direct-mapped, 1 = fully associative, 2 = set-associative
     const char *tracefile = NULL;
     char *inputFile = "test/example.csv";
     uint32_t memoryLatency = 100;

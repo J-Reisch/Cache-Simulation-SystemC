@@ -105,7 +105,7 @@ uint32_t numLinesPerSet
             if (cycleCount >= cycles) {
           		break;
         	}
-        } while (ready.read() == 0);
+        } while (!ready.read());
 
     }
 

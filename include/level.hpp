@@ -23,6 +23,19 @@ SC_MODULE(LEVEL) {
 	sc_out<bool> ready;
 	sc_out<bool> miss;
 
+	uint32_t cacheLineSize;
+	uint32_t numLines;
+	uint32_t latency;
+	uint8_t mappingStrategy;
+	uint32_t numLinesPerSet;
+
+	uint32_t numCacheSets;
+	uint8_t numOffsetBits;
+	uint8_t numIndexBits;
+	uint8_t numTagBits;
+
+	// TODO: add unordered map of cache sets
+
     SC_HAS_PROCESS(LEVEL);
     LEVEL(sc_module_name name, uint32_t cacheLineSize, uint32_t numLines, uint32_t latency, uint8_t mappingStrategy, uint32_t numLinesPerSet);
 

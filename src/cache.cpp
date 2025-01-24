@@ -11,19 +11,6 @@
 
 CACHE::CACHE (sc_module_name name, uint8_t numCacheLevels, uint32_t cacheLineSize, uint32_t numLinesL1, uint32_t numLinesL2, uint32_t numLinesL3, uint32_t latencyCacheL1, uint32_t latencyCacheL2, uint32_t latencyCacheL3, uint8_t mappingStrategy, uint32_t numLinesPerSet): sc_module(name), l1("l1", cacheLineSize, numLinesL1, latencyCacheL1, mappingStrategy, numLinesPerSet) {
     std::cout << "------ CACHE created ------\ncache levels: " << (int)numCacheLevels << "\ncache line size: " << cacheLineSize << "\nnumLinesL1: " << numLinesL1 << "\nlatencyCacheL1: " << latencyCacheL1 << "\nmapping strategy: " << (int)mappingStrategy << "\nlines per set: " << numLinesPerSet << "\n------------------" << std::endl;
-    // TODO: different for each cache level in case of fully associative
-    // direct-mapped caches have one line per set, fully associative caches have only one set
-
-    /*
-
-    if (mappingStrategy == 0) { // direct-mapped
-          numLinesPerSet = 1;
-    } else if (mappingStrategy == 1) { // fully associative
-         numLinesPerSet = cachelineSize;
-    }
-     */
-
-    // TODO: initialize signals
 
     // initialize level 1
     l1.clk.bind(clk);
@@ -37,6 +24,8 @@ CACHE::CACHE (sc_module_name name, uint8_t numCacheLevels, uint32_t cacheLineSiz
     l1.ready.bind(l1_ready);
     l1.miss.bind(l1_miss);
 
+    // TODO: create more levels if numCacheLevels > 1
+
     SC_THREAD(behaviour);
     sensitive << clk.pos();
 }
@@ -47,19 +36,25 @@ void CACHE::behaviour() {
 
         if (r.read()) {
             ready.write(0);
-            for (uint32_t i = 0; i < 3; i++) {
-                wait();
-            }
+
+            // try to read from level 1
             // read from L1
+            l1_r.write(1);
+            l1_addr.write(addr.read());
+
+            do {
+                wait();
+            } while (!l1_ready.read());
+
+            std::cout << "layer 1 done: " << l1_r.read() << std::endl;
 
             // ready
             ready.write(1);
         } else if (w.read()) {
             ready.write(0);
             // write to cache
-            for (uint32_t i = 0; i < 5; i++) {
-                wait();
-            }
+
+
             // ready
             ready.write(1);
         }
