@@ -10,17 +10,18 @@
 #include <iostream>
 
 class CacheLine {
-private:
     std::vector<uint8_t> bytes; // Storage for the cache line data
 
 public:
-    explicit CacheLine(uint32_t size);
+    uint32_t tag;
 
-    uint32_t read(size_t offset, uint8_t* buffer, size_t length);
+    CacheLine(uint32_t size, uint32_t tag);
 
-    void write(uint32_t offset, const uint8_t* data, size_t length);
+    uint32_t read(size_t offset);
 
-    void print();
+    void write(uint32_t offset, uint32_t wdata);
+
+    void printCacheLine();
 };
 
 #endif //CACHE_LINE_HPP

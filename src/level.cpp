@@ -6,20 +6,7 @@
 #include <cstdint>
 
 #include "level.hpp"
-
-uint8_t log2_int(uint32_t value) { // calculate log, round up if not power of two
-    uint8_t log = 0;
-    if (value <= 1) {
-        return 0;
-    }
-
-    value--;
-    while (value >>= 1) {
-        log++;
-    }
-    return log + 1;
-}
-
+#include "utils.hpp"
 
 LEVEL::LEVEL(sc_module_name name, uint32_t cacheLineSize, uint32_t numLines, uint32_t latency, uint8_t mappingStrategy, uint32_t numLinesPerSet)  {
 
@@ -56,10 +43,21 @@ LEVEL::LEVEL(sc_module_name name, uint32_t cacheLineSize, uint32_t numLines, uin
     sensitive << clk.pos();
 }
 
+void LEVEL::printLevel() {
+    for (auto it = cacheSets.begin(); it != cacheSets.end(); it++) {
+        uint32_t index = it->first;
+        CacheSet cacheSet = it->second;
+
+        std::cout << "Cache set " << index << ":" << std::endl;
+        cacheSet.printCacheSet();
+        std::cout << std::endl;
+    }
+}
+
 void LEVEL::behaviour() {
     while(true) {
         if (r.read()) {
-            ready.write(0);
+            ready.write(false);
 
             // split address into Tag, Index, Offset
             uint32_t address = addr.read();
@@ -77,15 +75,54 @@ void LEVEL::behaviour() {
             std::cout << "Offset: 0x" << std::hex << offset << std::dec << std::endl;
             */
 
-            // TODO: access according CacheSet
+            // access according CacheSet
+            auto mapEntry = this->cacheSets.find(index);
+            if (mapEntry != this->cacheSets.end()) {
+                miss.write(false);
+                CacheSet& set = mapEntry->second;
+                bool missInSet = false;
+                uint32_t data = set.read(tag, offset, &missInSet);
+                if (missInSet) {
+                    miss.write(true);
+                } else {
+                    miss.write(false);
+                    rdata.write(data);
+                }
+            } else {
+                miss.write(true);
+            }
 
             for (uint32_t i = 0; i < latency; i++) {
                 wait();
             }
 
-            ready.write(1);
+            ready.write(true);
         } else if (w.read()) {
+            ready.write(false);
 
+            // split address into Tag, Index, Offset
+            uint32_t address = addr.read();
+            uint32_t tag = addr >> (numOffsetBits + numIndexBits);
+            uint32_t index = (addr << numTagBits) >> (numOffsetBits + numTagBits);
+            uint32_t offset = (addr << (numTagBits + numIndexBits)) >> (numTagBits + numIndexBits);
+
+            // access according CacheSet
+            auto mapEntry = this->cacheSets.find(index);
+            if (mapEntry != this->cacheSets.end()) {
+                CacheSet& set = mapEntry->second;
+                set.write(tag, offset, wdata);
+            } else {
+                // create CacheSet
+                cacheSets[index] = CacheSet(numLinesPerSet, cacheLineSize);
+                cacheSets[index].write(tag, offset, wdata);
+            }
+
+
+            for (uint32_t i = 0; i < latency; i++) {
+                wait();
+            }
+
+            ready.write(true);
         } else if (access.read()) {
 
         }

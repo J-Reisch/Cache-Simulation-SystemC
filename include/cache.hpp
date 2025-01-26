@@ -7,6 +7,8 @@
 
 #include <systemc>
 #include <cstdint>
+#include <array>
+#include <memory>
 
 #include "level.hpp"
 
@@ -28,21 +30,37 @@ SC_MODULE(CACHE) {
     sc_out<bool> mem_r;
     sc_out<bool> mem_w;
 
-    // signals for level 1
-    sc_signal<uint32_t> l1_addr;
-    sc_signal<uint32_t> l1_wdata;
-    sc_signal<bool> l1_r;
-    sc_signal<bool> l1_w;
-    sc_signal<bool> l1_access; // used to change order of LRU
+    struct LevelSignals {
+        sc_signal<uint32_t> addr;
+        sc_signal<uint32_t> wdata;
+        sc_signal<bool> r;
+        sc_signal<bool> w;
+        sc_signal<bool> access; // used to change order of LRU
 
-    sc_signal<uint32_t> l1_rdata;
-    sc_signal<bool> l1_ready;
-    sc_signal<bool> l1_miss;
+        sc_signal<uint32_t> rdata;
+        sc_signal<bool> ready;
+        sc_signal<bool> miss;
+    };
+
+    std::array<LevelSignals, 3> levelSignals;
 
     LEVEL l1;
+    LEVEL l2;
+    LEVEL l3;
+
+    uint8_t numCacheLevels;
+    uint32_t cacheLineSize;
 
     SC_HAS_PROCESS(CACHE);
-    CACHE (sc_module_name name, uint8_t numCacheLevels, uint32_t cacheLineSize, uint32_t numLinesL1, uint32_t numLinesL2, uint32_t numLinesL3, uint32_t latencyCacheL1, uint32_t latencyCacheL2, uint32_t latencyCacheL3, uint8_t mappingStrategy, uint32_t numLinesPerSet);
+    CACHE(sc_module_name name, uint8_t numCacheLevels, uint32_t cacheLineSize, uint32_t numLinesL1, uint32_t numLinesL2, uint32_t numLinesL3, uint32_t latencyCacheL1, uint32_t latencyCacheL2, uint32_t latencyCacheL3, uint8_t mappingStrategy, uint32_t numLinesPerSet);
+
+    void writeToRAM (uint32_t addr, uint32_t data);
+
+    uint32_t readFromRAM (uint32_t addr);
+
+    void cacheMiss(uint32_t address, bool read, bool write, uint32_t data);
+
+    void printCache();
 
     void behaviour();
 

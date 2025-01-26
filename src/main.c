@@ -63,7 +63,7 @@ int main(int argc, char *argv[]) {
     const char* programName = argv[0];
 
     // default values
-    uint32_t cycles = 100;
+    uint32_t cycles = 1000;
     uint8_t numCacheLevels = 1;
     uint32_t cacheLineSize = 16;
     uint32_t numLinesL1 = 16, numLinesL2 = 32, numLinesL3 = 64;

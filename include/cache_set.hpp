@@ -13,6 +13,7 @@
 class CacheSet {
 private:
     uint32_t numLines;
+    uint32_t lineSize;
     // Map from tag to CacheLine
     std::unordered_map<uint32_t, std::list<CacheLine>::iterator> cacheMap;
 
@@ -20,7 +21,10 @@ private:
     std::list<CacheLine> cacheLines;
 
 public:
-    explicit CacheSet(uint32_t numLines);
+    CacheSet();
+    CacheSet(uint32_t numLines, uint32_t lineSize);
+
+    void printCacheSet();
 
     uint32_t read(uint32_t tag, uint32_t offset, bool* miss);
 

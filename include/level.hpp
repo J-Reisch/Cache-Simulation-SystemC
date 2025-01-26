@@ -8,6 +8,9 @@
 #include <systemc>
 #include <cstdint>
 #include <cmath>
+#include <unordered_map>
+
+#include "cache_set.hpp"
 
 using namespace sc_core;
 
@@ -34,10 +37,12 @@ SC_MODULE(LEVEL) {
 	uint8_t numIndexBits;
 	uint8_t numTagBits;
 
-	// TODO: add unordered map of cache sets
+	std::unordered_map<uint32_t, CacheSet> cacheSets;
 
     SC_HAS_PROCESS(LEVEL);
     LEVEL(sc_module_name name, uint32_t cacheLineSize, uint32_t numLines, uint32_t latency, uint8_t mappingStrategy, uint32_t numLinesPerSet);
+
+	void printLevel();
 
     void behaviour();
 };

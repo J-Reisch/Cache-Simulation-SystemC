@@ -13,9 +13,9 @@
 
 
 void clock_tick(sc_signal<bool> *clk, uint32_t *cycleCount) {
-     clk->write(1);
+     clk->write(true);
      sc_start(1, SC_NS);
-     clk->write(0);
+     clk->write(false);
      sc_start(1, SC_NS);
      (*cycleCount)++;
 }
@@ -54,6 +54,22 @@ uint32_t numLinesPerSet
     sc_signal<bool> mem_r;
     sc_signal<bool> mem_w;
 
+	// initialize signals to avoid undefined behaviour
+	clk.write(false);
+	addr.write(0);
+	wdata.write(0);
+	r.write(false);
+	w.write(false);
+	mem_ready.write(false);
+	mem_rdata.write(0);
+
+	rdata.write(0);
+	ready.write(false);
+	mem_addr.write(0);
+	mem_wdata.write(0);
+	mem_r.write(false);
+	mem_w.write(false);
+
     // initialize cache and main_memory
     CACHE cache("cache", numCacheLevels, cachelineSize, numLinesL1, numLinesL2, numLinesL3, latencyCacheL1, latencyCacheL2, latencyCacheL3, mappingStrategy, numLinesPerSet);
     MAIN_MEMORY mainMemory("main_memory", memoryLatency);
@@ -88,6 +104,8 @@ uint32_t numLinesPerSet
     Request current;
     // process requests
 
+	std::cout << "BEFORE requests are worked on" << std::endl;
+
     for (int i = 0; i < numRequests; i++) {
      	current = requests[i];
         std::cout << "Request " << i << ": " << (current.w ? "write" : "read") << std::endl;
@@ -107,7 +125,12 @@ uint32_t numLinesPerSet
         	}
         } while (!ready.read());
 
+    	cache.printCache();
+
+
     }
+
+	std::cout << "REQUESTS PROCESSED: " << std::endl;
 
 
     sc_stop();
