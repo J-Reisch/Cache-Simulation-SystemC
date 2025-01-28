@@ -100,15 +100,36 @@ uint32_t numLinesPerSet
     mainMemory.rdata.bind(mem_rdata);
     mainMemory.ready.bind(mem_ready);
 
-    uint32_t cycleCount = 0;
-    Request current;
-    // process requests
+	//Check if a trace file is supposed to be created
+	sc_trace_file* traceFilePtr;
+	if (tracefile != NULL) {
+		traceFilePtr = sc_create_vcd_trace_file(tracefile);
+		// sc_trace(traceFilePtr, clk, "Clock signal"); // not tracked for better readability of tracefile
+		sc_trace(traceFilePtr, addr, "Cache address");
+		sc_trace(traceFilePtr, wdata, "Cache wdata");
+		sc_trace(traceFilePtr, r, "Cache r");
+		sc_trace(traceFilePtr, w, "Cache w");
+		sc_trace(traceFilePtr, rdata, "Cache rdata");
+		sc_trace(traceFilePtr, ready, "Cache ready");
+		sc_trace(traceFilePtr, mem_ready, "Memory mem_ready");
+		sc_trace(traceFilePtr, mem_rdata, "Memory mem_rdata");
+		sc_trace(traceFilePtr, mem_addr, "Memory mem_addr");
+		sc_trace(traceFilePtr, mem_wdata, "Memory mem_wdata");
+		sc_trace(traceFilePtr, mem_r, "Memory mem_r");
+		sc_trace(traceFilePtr, mem_w, "Memory mem_w");
+	}
 
-	std::cout << "BEFORE requests are worked on" << std::endl;
+	uint32_t cycleCount = 0;
+	Request current;
 
     for (int i = 0; i < numRequests; i++) {
      	current = requests[i];
-        std::cout << "Processing request " << i << ": " << (current.w ? "WRITE" : "READ") << std::endl;
+
+    	if (current.w) {
+    		std::cout << "Request " << i << ": WRITE 0x" << std::hex << current.data << " to 0x" << current.addr << std::dec << std::endl;
+    	} else {
+    		std::cout << "Request " << i << ": READ FROM 0x" << std::hex << current.addr << std::dec << std::endl;
+    	}
 
         // write cache input ports
       	addr.write(current.addr);
@@ -121,7 +142,7 @@ uint32_t numLinesPerSet
     	w.write(false);
     	r.write(false);
 
-        // wait until cache is done
+        // wait until cache is ready
         do {
         	clock_tick(&clk, &cycleCount);
 
@@ -138,6 +159,11 @@ uint32_t numLinesPerSet
     }
 
     sc_stop();
+
+	if (tracefile != nullptr) {
+		sc_close_vcd_trace_file(traceFilePtr);
+	}
+
     return {cycleCount, 0, 0, 0};
 }
 

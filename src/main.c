@@ -34,7 +34,7 @@ void print_help(const char* programName) {
           "  -l, --memory-latency <num>      The latency for RAM (equal for read and write)\n"
           "  -p, --num-lines-per-set <num>   For set-associative caches only\n" // TODO: one parameter per layer?
           "  -h, --help                      Print this help message and exit"
-          "  --test                          Run tests and exit\n";
+          "  -t, --test                      Run tests and exit\n";
 
     fprintf(stderr, msg, programName);
 }
@@ -57,6 +57,15 @@ int string_to_uint8_t(const char *str, uint8_t *value) {
     *value = strtoul(str, &endptr, 10);
     return (*endptr == '\0') ? 0 : 1;
 }
+
+void run_tests() {
+
+}
+
+// TODO: use --test option
+// TODO: add tracefile
+// Bei Verwendung der Option --tf soll ein Tracefile erstellt werden. Das Tracefile soll alle
+//verwendeten Signale beinhalten
 
 int main(int argc, char *argv[]) {
 
@@ -89,6 +98,7 @@ int main(int argc, char *argv[]) {
         {"num-lines-per-set", required_argument, NULL, 'p'},
         {"tf", required_argument, NULL, 'e'},
         {"help", no_argument, NULL, 'h'},
+        {"test", no_argument, NULL, 't'},
         {NULL, 0, NULL, 0}
     };
 
@@ -163,6 +173,9 @@ int main(int argc, char *argv[]) {
             case 'h':
                 print_help(programName);
                 return 0;
+            case 't':
+                run_tests();
+                return 0;
             default:
                 print_usage_msg(programName);
                 return 1;
@@ -210,7 +223,6 @@ int main(int argc, char *argv[]) {
         }
     }
 
-printf("before tracefile\n");
     // Check if tracefile name is legal
     if (tracefile != NULL) {
         char illegalCharacters[] = {'\n' ,':', '"'};
