@@ -108,13 +108,18 @@ uint32_t numLinesPerSet
 
     for (int i = 0; i < numRequests; i++) {
      	current = requests[i];
-        std::cout << "Request " << i << ": " << (current.w ? "write" : "read") << std::endl;
+        std::cout << "Processing request " << i << ": " << (current.w ? "WRITE" : "READ") << std::endl;
 
         // write cache input ports
       	addr.write(current.addr);
         wdata.write(current.data);
         w.write(current.w == 1);
         r.write(current.w != 1);
+
+    	clock_tick(&clk, &cycleCount);
+
+    	w.write(false);
+    	r.write(false);
 
         // wait until cache is done
         do {
@@ -127,11 +132,10 @@ uint32_t numLinesPerSet
 
     	cache.printCache();
 
+    	std::cout << "READ: " << std::hex << rdata.read() << std::dec << std::endl;
 
+    	std::cout << "CACHELINE test: " << std::hex << (int)cache.getCacheLineContent(1, 0, 0) << std::dec << std::endl;
     }
-
-	std::cout << "REQUESTS PROCESSED: " << std::endl;
-
 
     sc_stop();
     return {cycleCount, 0, 0, 0};

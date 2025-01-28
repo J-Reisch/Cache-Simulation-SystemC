@@ -45,6 +45,8 @@ SC_MODULE(LEVEL) {
 	void printLevel();
 
     void behaviour();
+
+	uint8_t getCacheLineContentOfLevel(uint32_t address);
 };
 
 #endif //LEVEL_HPP

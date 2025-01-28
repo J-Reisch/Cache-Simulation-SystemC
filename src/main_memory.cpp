@@ -52,7 +52,7 @@ void MAIN_MEMORY::doWrite() {
 }
 
 uint32_t MAIN_MEMORY::get(uint32_t address) {
-    std::cout << "RAM reading: " << std::hex << address << std::dec << std::endl;
+    std::cout << "RAM reading: 0x" << std::hex << address << std::dec << std::endl;
     uint32_t result = 0;
 
     for (int i = 0; i < 4; i++) {
@@ -67,7 +67,8 @@ uint32_t MAIN_MEMORY::get(uint32_t address) {
 }
 
 void MAIN_MEMORY::set(uint32_t address, uint32_t value) {
-    std::cout << "RAM writing: " << std::hex << address << " " << value << std::dec << std::endl;
+    std::cout << "RAM writing: 0x" << std::hex << address << " 0x" << value << std::dec << std::endl;
+    // Little Endian
     for (int i = 0; i < 4; i++) {
         memory[address + i] = (value >> (i * 8)) & 0xFF;
         if(address + i == UINT32_MAX) {

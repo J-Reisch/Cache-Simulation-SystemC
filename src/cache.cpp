@@ -53,15 +53,15 @@ CACHE::CACHE(sc_module_name name, uint8_t numCacheLevels, uint32_t cacheLineSize
     l3.miss.bind(levelSignals[2].miss);
 
     for (int i = 0; i < 3; i++) {
-        levelSignals[i].addr = 0;
-        levelSignals[i].wdata = 0;
-        levelSignals[i].r = false;
-        levelSignals[i].w = false;
-        levelSignals[i].access = false;
+        levelSignals[i].addr.write(0);
+        levelSignals[i].wdata.write(0);
+        levelSignals[i].r.write(false);
+        levelSignals[i].w.write(false);
+        levelSignals[i].access.write(false);
 
-        levelSignals[i].rdata = false;
-        levelSignals[i].ready = false;
-        levelSignals[i].miss = false;
+        levelSignals[i].rdata.write(0);
+        levelSignals[i].ready.write(false);
+        levelSignals[i].miss.write(false);
     }
 
     this->numCacheLevels = numCacheLevels;
@@ -78,6 +78,7 @@ void CACHE::writeToRAM(uint32_t addr, uint32_t data) {
 
     wait();
     mem_w.write(false);
+    wait();
 
     while (!mem_ready.read()) {
         wait();
@@ -101,43 +102,70 @@ uint32_t CACHE::readFromRAM(uint32_t addr) {
     return result;
 }
 
+uint32_t CACHE::readFromLevel(uint8_t level, uint32_t addr, bool* miss) { // level is between 1 and 3
+    std::cout << (int)level << addr << miss << std::endl;
+    levelSignals[level].addr.write(addr);
+    levelSignals[level].r.write(true);
+    wait();
+    levelSignals[level].r.write(false);
+    wait();
+
+    while (!levelSignals[level].ready.read()) {
+        wait();
+    }
+
+    if (miss) {
+        *miss = levelSignals[level].miss.read();
+    }
+
+    return levelSignals[level].rdata.read();
+}
+
+void CACHE::writeToLevel(uint8_t level, uint32_t addr, uint32_t data) {
+    levelSignals[level].addr.write(addr);
+    levelSignals[level].wdata.write(data);
+
+    levelSignals[level].w.write(true);
+    wait();
+    levelSignals[level].w.write(false);
+    wait();
+
+    while (!levelSignals[level].ready.read()) {
+        wait();
+    }
+}
+
+void CACHE::accessLevel(uint8_t level, uint32_t addr) {
+    // This method labels the corresponding line as most recently used
+    // This will not cause a delay
+
+    levelSignals[level].addr.write(addr);
+    levelSignals[level].access.write(true);
+    wait();
+    levelSignals[level].access.write(false);
+    wait();
+}
+
 void CACHE::cacheMiss(uint32_t address, bool read, bool write, uint32_t data) {
+    std::cout << "CACHE MISS " <<std::endl;
     if (write) {
-        // write 4 Bytes to RAM
+        // write new data to RAM before loading the cache line
         writeToRAM(address, data);
     }
 
     // get start address of cache line
-    uint8_t numOffsetBits = log2_int(cacheLineSize);
+    uint8_t numOffsetBits = log2_int(this->cacheLineSize);
     uint32_t startAddress = (address >> numOffsetBits) << numOffsetBits; // cut off Offset Bits
 
-    // load the cache line from RAM
-    uint32_t word, currentAddr;
-    for (int i = 0; i < cacheLineSize / 4; i++) {
+    // load the cache line from RAM to all levels
+    uint32_t word = 0, currentAddr = 0;
+    for (int i = 0; i < this->cacheLineSize / 4; i++) {
         currentAddr = startAddress + i * 4;
-        std::cout << "Copying address: " << std::hex << currentAddr << std::dec << std::endl;
         word = readFromRAM(currentAddr);
-        // write word to L1
-        levelSignals[0].addr.write(currentAddr);
-        levelSignals[0].wdata.write(word);
 
-        levelSignals[0].w.write(true);
-        wait();
-        levelSignals[0].w.write(false);
-        wait();
-
-        while (!levelSignals[0].ready.read()) {
-            wait();
-        }
-
-        // write word to L2
-        if (numCacheLevels > 1) {
-            // TODO
-        }
-
-        // write word to L3
-        if (numCacheLevels > 2) {
-            // TODO
+        // write word to all levels
+        for (int i = 0; i < this->numCacheLevels; i++) {
+            writeToLevel(i, currentAddr, word);
         }
     }
 }
@@ -146,72 +174,82 @@ void CACHE::printCache() {
     std::cout << "------ CACHE BEGIN ------" << std::endl;
     std::cout << "L1: " << std::endl;
     l1.printLevel();
+    std::cout << "L2: " << std::endl;
+    l2.printLevel();
+    std::cout << "L3: " << std::endl;
+    l3.printLevel();
     std::cout << "------ CACHE END --------" << std::endl;
 }
 
 void CACHE::behaviour() {
     while(true) {
-        //std::cout << "Cache triggered at time: " << sc_time_stamp() << std::endl;
+        // save input signals
+        address = addr.read();
+        write = w.read();
+        read = r.read();
+        data = wdata.read();
+        std::cout << "Cache triggered at time: " << sc_time_stamp() << std::endl;
 
-        if (r.read()) {
+        if (read) {
             ready.write(false);
 
-            // try to read from level 1
-            // read from L1
-            levelSignals[0].addr.write(addr.read());
-            levelSignals[0].r.write(true);
-            wait();
-            levelSignals[0].r.write(false);
-            wait();
-
-            while (!levelSignals[0].ready.read()) {
-                wait();
+            bool miss;
+            uint32_t result;
+            for (int i = 0; i < numCacheLevels; i++) {
+                result = readFromLevel(i, address, &miss);
+                if (!miss) {
+                    // access remaining cache lines
+                    for (int j = i+1; j < numCacheLevels; j++) {
+                        accessLevel(j, address);
+                    }
+                    break;
+                }
+                if (i == numCacheLevels - 1) {
+                    cacheMiss(address, read, write, data); // load from RAM in L1, L2, L3
+                    result = readFromLevel(0, address, &miss); // read from L1 after cache miss
+                    if (miss) {
+                        std::cout << "something doesn't work" << std::endl;
+                    }
+                }
             }
 
-            if (levelSignals[0].miss.read()) {
-                // TODO: also check L2 and L3
-                std::cout << "value not in L1" << std::endl;
+            rdata.write(result);
 
-                // CACHE MISS
-                cacheMiss(addr, r, w, wdata);
-            } else {
-                rdata.write(levelSignals[0].rdata.read());
-            }
-
-            // ready
             ready.write(true);
-        } else if (w.read()) {
+        } else if (write) {
             ready.write(false);
-            // write to cache
 
-            // read from L1 to see if line exists, if it doesn't exist, go to L2, ..., if in no level, get from RAM
-            levelSignals[0].addr.write(addr.read());
-
-            levelSignals[0].r.write(true);
-            wait();
-            levelSignals[0].r.write(false);
-            wait();
-
-            while (!levelSignals[0].ready.read()) {
-                wait();
+            bool miss;
+            for (int i = 0; i < numCacheLevels; i++) {
+                readFromLevel(i, address, &miss);
+                if (!miss) {
+                    // found in L_i -> now write to L_i and everything above
+                    for (int j = i; j < numCacheLevels; j++) {
+                        writeToLevel(j, address, data);
+                    }
+                    break;
+                }
+                if (i == numCacheLevels - 1) {
+                    cacheMiss(address, read, write, data); // write data to RAM and then load cache line from RAM in L1, L2, L3
+                }
             }
 
-            if (levelSignals[0].miss.read()) {
-                // TODO: also check L2 and L3
-                std::cout << "value not in L1" << std::endl;
-
-                // CACHE MISS
-                cacheMiss(addr, r, w, wdata);
-            }
-
-            // ready
             ready.write(true);
         }
-        wait(); // necessary???
+        wait(); // TODO: necessary???
     }
 }
 
 uint8_t CACHE::getCacheLineContent(uint32_t level, uint32_t lineIndex, uint32_t index) {
-    // TODO: returns byte in cache-level level and cache-line lineIndex at offset index
-    return 0;
+    // assumption: level = 1 corresponds to L1
+    if (level == 1) {
+        return l1.getCacheLineContentOfLevel(lineIndex * cacheLineSize + index);
+    } else if (level == 2) {
+        return l2.getCacheLineContentOfLevel(lineIndex * cacheLineSize + index);
+    } else if (level == 3) {
+        return l3.getCacheLineContentOfLevel(lineIndex * cacheLineSize + index);
+    } else {
+        std::cout << "Doesn't exist" << std::endl;
+        return 0;
+    }
 }

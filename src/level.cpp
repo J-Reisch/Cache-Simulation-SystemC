@@ -10,27 +10,27 @@
 
 LEVEL::LEVEL(sc_module_name name, uint32_t cacheLineSize, uint32_t numLines, uint32_t latency, uint8_t mappingStrategy, uint32_t numLinesPerSet)  {
 
-    // direct-mapped caches have one line per set, fully associative caches have only one set
-    if (mappingStrategy == 0) { // direct-mapped
-        numLinesPerSet = 1;
-    } else if (mappingStrategy == 1) { // fully associative
-        numLinesPerSet = numLines;
-    }
-
     this->cacheLineSize = cacheLineSize;
     this->numLines = numLines;
     this->latency = latency;
     this->mappingStrategy = mappingStrategy;
     this->numLinesPerSet = numLinesPerSet;
 
-    this->numCacheSets = numLines / numLinesPerSet; // 1 in case of fully associative
+    // direct-mapped caches have one line per set, fully associative caches have only one set
+    if (mappingStrategy == 0) { // direct-mapped
+        this->numLinesPerSet = 1;
+    } else if (mappingStrategy == 1) { // fully associative
+        std::cout << "fully associative" << std::endl;
+        this->numLinesPerSet = numLines;
+    }
+
+    this->numCacheSets = numLines / this->numLinesPerSet; // 1 in case of fully associative
     // calculate number of offset Bits (same for all levels since cacheLineSize is same)
     this->numOffsetBits = log2_int(cacheLineSize); // cacheLineSize is always power of 2
-    // calculate number of index Bits for each level (first calculate number of cache-Sets (numLinesLX / numLinesPerSet))
+    // calculate number of index Bits for each level (first calculate number of cache-Sets (numLinesLX / this->numLinesPerSet))
     this->numIndexBits = log2_int(numCacheSets); // TODO: what to do with remainder? (there should be no remainder when parameters are specified correctly)
     // calculate number of tag Bits for each level (32 - index Bits of level - offset Bits)
     this->numTagBits = 32 - numOffsetBits - numIndexBits;
-
 
     /*
     std::cout << "NEW LAYER CREATED" << std::endl;
@@ -56,26 +56,13 @@ void LEVEL::printLevel() {
 
 void LEVEL::behaviour() {
     while(true) {
+        uint32_t tag = (addr >> numOffsetBits) >> numIndexBits; // shifts have to be < 32 Bits
+        uint32_t index = ((addr << numTagBits) >> numTagBits) >> numOffsetBits;
+        uint32_t offset = ((((addr << numTagBits) << numIndexBits) >> numTagBits) >> numIndexBits);
         if (r.read()) {
             ready.write(false);
 
-            // split address into Tag, Index, Offset
-            uint32_t address = addr.read();
-            uint32_t tag = addr >> (numOffsetBits + numIndexBits);
-            uint32_t index = (addr << numTagBits) >> (numOffsetBits + numTagBits);
-            uint32_t offset = (addr << (numTagBits + numIndexBits)) >> (numTagBits + numIndexBits);
-
-            /*
-            std::cout << "ADDRESS: 0x" << std::hex << address << std::dec << std::endl;
-            std::cout << "numTagBits:" << (int)numTagBits << std::endl;
-            std::cout << "numIndexBits:" << (int)numIndexBits << std::endl;
-            std::cout << "numOffsetBits:" << (int)numOffsetBits << std::endl;
-            std::cout << "Tag: 0x" << std::hex << tag << std::endl;
-            std::cout << "Index: 0x" << std::hex << index << std::endl;
-            std::cout << "Offset: 0x" << std::hex << offset << std::dec << std::endl;
-            */
-
-            // access according CacheSet
+            // find according CacheSet
             auto mapEntry = this->cacheSets.find(index);
             if (mapEntry != this->cacheSets.end()) {
                 miss.write(false);
@@ -101,10 +88,8 @@ void LEVEL::behaviour() {
             ready.write(false);
 
             // split address into Tag, Index, Offset
-            uint32_t address = addr.read();
-            uint32_t tag = addr >> (numOffsetBits + numIndexBits);
-            uint32_t index = (addr << numTagBits) >> (numOffsetBits + numTagBits);
-            uint32_t offset = (addr << (numTagBits + numIndexBits)) >> (numTagBits + numIndexBits);
+            std::cout << "numOffSetBits " << (int)numOffsetBits << " numIndexBits" << (int)numIndexBits << " numTagBits" << (int)numTagBits << std::endl;
+            std::cout << "WRITING in LEVEL: 0x" << std::hex << tag << " 0x" << index << " 0x" << offset << std::dec << std::endl;
 
             // access according CacheSet
             auto mapEntry = this->cacheSets.find(index);
@@ -117,15 +102,40 @@ void LEVEL::behaviour() {
                 cacheSets[index].write(tag, offset, wdata);
             }
 
-
             for (uint32_t i = 0; i < latency; i++) {
                 wait();
             }
 
             ready.write(true);
         } else if (access.read()) {
-
+            // find according CacheSet
+            auto mapEntry = this->cacheSets.find(index);
+            if (mapEntry != this->cacheSets.end()) {
+                CacheSet& set = mapEntry->second;
+                set.access(tag, offset);
+            } else {
+                std::cout << "Access didn't work because CacheSet of needed CacheLine not in Level (shouldn't be possible!)" << std::endl;
+            }
         }
         wait();
     }
+}
+
+uint8_t LEVEL::getCacheLineContentOfLevel(uint32_t address) {
+    uint32_t tag = (address >> numOffsetBits) >> numIndexBits; // shifts have to be < 32 Bits
+    uint32_t index = ((address << numTagBits) >> numTagBits) >> numOffsetBits;
+    uint32_t offset = ((((address << numTagBits) << numIndexBits) >> numTagBits) >> numIndexBits);
+    auto mapEntry = this->cacheSets.find(index);
+    if (mapEntry != this->cacheSets.end()) {
+        CacheSet& set = mapEntry->second;
+        bool missInSet = false;
+        uint32_t data = (set.read(tag, offset, &missInSet) << 24) >> 24;
+        if (missInSet) {
+            std::cout << "Doesn't exist!" << std::endl;
+            return 0;
+        }
+        return static_cast<uint8_t>(data);
+    }
+    std::cout << "Doesn't exist!" << std::endl;
+    return 0;
 }

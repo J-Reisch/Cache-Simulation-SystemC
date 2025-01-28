@@ -18,6 +18,7 @@ CacheLine::CacheLine(uint32_t size, uint32_t tag) {
 uint32_t CacheLine::read(size_t offset) {
     if (offset + 4 > bytes.size()) {
         std::cout << "READ ADDRESS crosses cache lines" << std::endl; // TODO: easiest: fill with zeros
+        return 0;
     }
     uint32_t result = 0;
     std::memcpy(&result, &bytes[offset], 4);
@@ -27,6 +28,7 @@ uint32_t CacheLine::read(size_t offset) {
 void CacheLine::write(uint32_t offset, uint32_t wdata) {
     if (offset + 4 > bytes.size()) {
         std::cout << "WRITE ADDRESS crosses cache lines" << std::endl; // TODO: easiest: fill with zeros
+        return;
     }
     std::memcpy(&bytes[offset], &wdata, 4);
 }

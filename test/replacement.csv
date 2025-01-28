@@ -1,0 +1,6 @@
+W, 0x0003, 0xAAAAAAAA   # Set 0 (assumption: ./project --num-lines-l1 4 --num-lines-per-set 2 --cycles 10000  test/replacement.csv)
+W, 0x0023, 0xBBBBBBBB   # Set 0
+W, 0x0043, 0xCCCCCCCC   # Set 0, replacement of 0x0003
+R, 0x0003               # miss, replacement of 0x0023
+R, 0x0023               # miss, replacement of 0x0043
+R, 0x0043               # miss

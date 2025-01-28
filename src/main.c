@@ -235,6 +235,10 @@ printf("before tracefile\n");
     // TODO: Check if cache is large enough and if all values make sense
 
     // TODO: implement test (call seperate function in seperate file and then terminate)
+    if (cacheLineSize == 0) {
+        fprintf(stderr, "size of cache line can't be zero");
+        return 1;
+    }
 
     int numRequests;
 
@@ -245,7 +249,7 @@ printf("before tracefile\n");
     printf("--------- REQUESTS ---------\n");
     printf("WRITE\tADDRESS\tDATA\n");
     for (int i = 0; i < numRequests; i++) {
-		printf("%u\t%u\t%u\n", requests[i].w, requests[i].addr, requests[i].data);
+		printf("%u\t0x%x\t0x%x\n", requests[i].w, requests[i].addr, requests[i].data);
     }
     printf("---------- REQUESTS END ---------\n");
 
