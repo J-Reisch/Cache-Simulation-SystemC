@@ -17,3 +17,9 @@ uint8_t log2_int(uint32_t value) { // calculate log, round up if not power of tw
     }
     return log + 1;
 }
+
+uint32_t mergeData(uint32_t data1, uint32_t data2, uint8_t bytesToRight) {
+    uint32_t result = (data1 & ((1 << (bytesToRight * 8)) - 1))
+                    | (data2 << (bytesToRight * 8));
+    return result;
+}

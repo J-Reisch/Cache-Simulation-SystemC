@@ -7,5 +7,5 @@ W, 0x0020, 0xDDDDDDDD   # maps to set 0 in L1 but set 2 in L2 -> 0xCCCCCCCC stil
 R, 0x0040               # no cache miss (in L2)
 W, 0x0023, 0xEEEEEEEE   # line already exists in both levels
 R, 0x0020               # return 0xEEDDDDDD
-W, 0x002F, 0xFFFFFFFF   # write across lines 0x0020 and 0x0030
-R, 0x002F               # read across lines
+W, 0x002F, 0x12345678   # write across lines 0x0020 and 0x0030 (cache miss for 0x3)
+R, 0x002E               # read across lines

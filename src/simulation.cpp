@@ -169,7 +169,7 @@ struct Request* requests
 
     	cache.printCache();
 
-    	if (current->w) {
+    	if (current->w != 1) {
     		std::cout << "DATA READ: " << std::hex << rdata.read() << std::dec << std::endl;
     	}
     }

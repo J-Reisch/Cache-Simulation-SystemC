@@ -19,7 +19,7 @@ public:
 
     uint32_t read(size_t offset);
 
-    void write(uint32_t offset, uint32_t wdata);
+    void write(uint32_t offset, uint32_t wdata, uint8_t numBytes);
 
     void printCacheLine();
 };

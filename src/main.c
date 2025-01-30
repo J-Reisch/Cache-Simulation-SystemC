@@ -64,38 +64,47 @@ void run_tests() {
     int numRequests;
     struct Request* requests = parse_csv("test/test.csv", &numRequests);
 
-    struct Result test_res = run_simulation(10000, NULL, 2, 16,
+    struct Result test_res = run_simulation(100000, NULL, 2, 16,
                                             4, 8, 16, 10,
                                             20, 40, 2,
                                             numRequests, requests);
-
-    for (int i = 0; i < numRequests; i++) {
-        printf("%i: %u\n", i, requests[i].data);
-    }
 
     bool correct = true;
     if (requests[1].data != 0xAAAAAAAA) {
         fprintf(stderr, "Simple read/write test failed: Expected request 2 to have data 0xAAAAAAAA, but got %#x\n", requests[1].data);
         correct = false;
+        goto cleanup;
     }
 
     if (requests[4].data != 0xBBBBBBBB) {
         fprintf(stderr, "LRU test failed: Expected request 3 to have data 0xBBBBBBBB, but got %#x\n", requests[4].data);
         correct = false;
+        goto cleanup;
     }
 
     if (requests[8].data != 0xEEDDDDDD) {
         fprintf(stderr, "write to same line test failed: Expected request 9 to have data 0xEEDDDDDD, but got %#x\n", requests[8].data);
         correct = false;
+        goto cleanup;
+    }
+
+    if (requests[10].data != 0x34567800) {
+        fprintf(stderr, "write across cache lines: Expected request 11 to have data 0x34567800, but got %#x\n", requests[10].data);
+        correct = false;
+        goto cleanup;
     }
 
 
-    if (test_res.misses != 4) {
+    if (test_res.misses != 5) {
         fprintf(stderr, "Expected 4 misses in total, but got %u\n", test_res.misses);
         correct = false;
+        goto cleanup;
     }
 
-    free(requests);
+    cleanup:
+    if (requests) {
+        free(requests);
+    }
     if (!correct) {
         exit(EXIT_FAILURE);
     } else {

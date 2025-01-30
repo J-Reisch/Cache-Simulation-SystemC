@@ -107,8 +107,9 @@ uint32_t CACHE::readFromRAM(uint32_t addr) {
     return result;
 }
 
-uint32_t CACHE::readFromLevel(uint8_t level, uint32_t addr, bool* miss, uint8_t bytes) { // level is between 1 and 3
+uint32_t CACHE::readFromLevel(uint8_t level, uint32_t addr, bool* miss) { // level is between 1 and 3
     levelSignals[level].addr.write(addr);
+
     levelSignals[level].r.write(true);
     wait();
     levelSignals[level].r.write(false);
@@ -128,6 +129,8 @@ uint32_t CACHE::readFromLevel(uint8_t level, uint32_t addr, bool* miss, uint8_t 
 void CACHE::writeToLevel(uint8_t level, uint32_t addr, uint32_t data, uint8_t bytes) {
     levelSignals[level].addr.write(addr);
     levelSignals[level].wdata.write(data);
+    levelSignals[level].numBytes.write(bytes);
+    std::cout << "write to level " << (int)level << " data: " << data << " bytes: " << (int)bytes << std::endl;
 
     levelSignals[level].w.write(true);
     wait();
@@ -175,11 +178,11 @@ void CACHE::cacheMiss(uint32_t address, bool read, bool write, uint32_t data, ui
     }
 }
 
-uint32_t CACHE::readFromCache(uint32_t address, uint8_t bytes) {
+uint32_t CACHE::readFromCache(uint32_t address, uint32_t data, uint8_t bytes) {
     bool miss;
     uint32_t result = 0;
     for (int i = 0; i < numCacheLevels; i++) {
-        result = readFromLevel(i, address, &miss, bytes);
+        result = readFromLevel(i, address, &miss);
         if (!miss) {
             // access remaining cache lines
             for (int j = i+1; j < numCacheLevels; j++) {
@@ -189,7 +192,7 @@ uint32_t CACHE::readFromCache(uint32_t address, uint8_t bytes) {
         }
         if (i == numCacheLevels - 1) {
             cacheMiss(address, read, write, data, bytes); // load from RAM in L1, L2, L3
-            result = readFromLevel(0, address, &miss, bytes); // read from L1 after cache miss
+            result = readFromLevel(0, address, &miss); // read from L1 after cache miss
             if (miss) {
                 std::cout << "something doesn't work" << std::endl;
             }
@@ -198,10 +201,10 @@ uint32_t CACHE::readFromCache(uint32_t address, uint8_t bytes) {
     return result;
 }
 
-void CACHE::writeToCache(uint32_t address, uint8_t bytes) {
+void CACHE::writeToCache(uint32_t address, uint32_t data, uint8_t bytes) {
     bool miss;
     for (int i = 0; i < numCacheLevels; i++) {
-        readFromLevel(i, address, &miss, bytes);
+        readFromLevel(i, address, &miss);
         if (!miss) {
             // found in L_i -> now write to L_i and everything above
             for (int j = i; j < numCacheLevels; j++) {
@@ -244,7 +247,13 @@ void CACHE::behaviour() {
             ready.write(false);
             hit.write(true);
 
-            uint32_t result = readFromCache(address, 4);
+
+            uint32_t result;
+            if (acrossLines) {
+                result = mergeData(readFromCache(address, 0, bytesToRight), readFromCache(address + bytesToRight, 0, 4 - bytesToRight), bytesToRight);
+            } else {
+                result = readFromCache(address, 0, 4);
+            }
 
             rdata.write(result);
 
@@ -254,10 +263,10 @@ void CACHE::behaviour() {
             hit.write(true);
 
             if (acrossLines) {
-                writeToCache(address, bytesToRight);
-                writeToCache(address + bytesToRight, 4 - bytesToRight);
+                writeToCache(address, data, bytesToRight);
+                writeToCache(address + bytesToRight, data >> 8 * bytesToRight, 4 - bytesToRight);
             } else {
-                writeToCache(address, 4);
+                writeToCache(address, data, 4);
             }
 
             ready.write(true);

@@ -28,7 +28,7 @@ public:
 
     uint32_t read(uint32_t tag, uint32_t offset, bool* miss);
 
-    void write(uint32_t tag, uint32_t offset, uint32_t wdata);
+    void write(uint32_t tag, uint32_t offset, uint32_t wdata, uint8_t bytes);
 
     void access(uint32_t tag, uint32_t offset);
 };

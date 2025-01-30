@@ -65,7 +65,7 @@ SC_MODULE(CACHE) {
 
     uint32_t readFromRAM (uint32_t addr);
 
-    uint32_t readFromLevel(uint8_t level, uint32_t addr, bool* miss, uint8_t bytes);
+    uint32_t readFromLevel(uint8_t level, uint32_t addr, bool* miss);
 
     void writeToLevel(uint8_t level, uint32_t addr, uint32_t data, uint8_t bytes);
 
@@ -73,9 +73,9 @@ SC_MODULE(CACHE) {
 
     void cacheMiss(uint32_t address, bool read, bool write, uint32_t data, uint8_t bytes);
 
-    uint32_t readFromCache(uint32_t address, uint8_t bytes);
+    uint32_t readFromCache(uint32_t address, uint32_t data, uint8_t bytes);
 
-    void writeToCache(uint32_t address, uint8_t bytes);
+    void writeToCache(uint32_t address, uint32_t data, uint8_t bytes);
 
     void printCache();
 

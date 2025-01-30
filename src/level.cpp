@@ -90,11 +90,11 @@ void LEVEL::behaviour() {
             auto mapEntry = this->cacheSets.find(index);
             if (mapEntry != this->cacheSets.end()) {
                 CacheSet& set = mapEntry->second;
-                set.write(tag, offset, wdata);
+                set.write(tag, offset, wdata, numBytes.read());
             } else {
                 // create CacheSet
                 cacheSets[index] = CacheSet(numLinesPerSet, cacheLineSize);
-                cacheSets[index].write(tag, offset, wdata);
+                cacheSets[index].write(tag, offset, wdata, numBytes.read());
             }
 
             for (uint32_t i = 0; i < latency; i++) {

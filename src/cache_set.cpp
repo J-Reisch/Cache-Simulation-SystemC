@@ -35,13 +35,13 @@ uint32_t CacheSet::read(uint32_t tag, uint32_t offset, bool* miss) {
     }
 }
 
-void CacheSet::write(uint32_t tag, uint32_t offset, uint32_t wdata) {
+void CacheSet::write(uint32_t tag, uint32_t offset, uint32_t wdata, uint8_t bytes) {
     // check if line exists
     auto mapEntry = this->cacheMap.find(tag);
     if (mapEntry != this->cacheMap.end()) { // line exists
         // std::cout << "  Line in Cache" << std::endl;
         CacheLine& line = *(mapEntry->second);
-        line.write(offset, wdata);
+        line.write(offset, wdata, bytes);
     } else { // cache miss (since there is a read() check first, this implies that the value did exist in no cache line and was loaded from RAM)
         // std::cout << "  Line not in Cache" << std::endl;
         if (cacheLines.size() >= numLines) {
@@ -55,7 +55,7 @@ void CacheSet::write(uint32_t tag, uint32_t offset, uint32_t wdata) {
         // add new cache line
         cacheLines.emplace_back(lineSize, tag); // in-place creation of CacheLine (no unnecessary copying)
         auto it = std::prev(cacheLines.end());
-        it->write(offset, wdata);
+        it->write(offset, wdata, bytes);
         cacheMap[tag] = it;
     }
 }
