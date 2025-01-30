@@ -21,6 +21,7 @@ SC_MODULE(LEVEL) {
     sc_in<bool> w;
     sc_in<bool> r;
 	sc_in<bool> access;
+	sc_in<uint8_t> numBytes;
 
 	sc_out<uint32_t> rdata;
 	sc_out<bool> ready;

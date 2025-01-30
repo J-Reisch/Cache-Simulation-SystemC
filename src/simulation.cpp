@@ -11,6 +11,9 @@
 #include "main_memory.hpp"
 #include "simulation.hpp"
 
+#define memoryLatency 100
+#define numLinesPerSet 2
+
 
 void clock_tick(sc_signal<bool> *clk, uint32_t *cycleCount) {
      clk->write(true);
@@ -33,9 +36,7 @@ uint32_t latencyCacheL2,
 uint32_t latencyCacheL3,
 uint8_t mappingStrategy,
 uint32_t numRequests,
-struct Request* requests,
-uint32_t memoryLatency,
-uint32_t numLinesPerSet
+struct Request* requests
 ) {
     // signals sc_in
     sc_signal<bool> clk;
@@ -53,8 +54,9 @@ uint32_t numLinesPerSet
     sc_signal<uint32_t> mem_wdata;
     sc_signal<bool> mem_r;
     sc_signal<bool> mem_w;
+	sc_signal<bool> hit;
 
-	// initialize signals to avoid undefined behaviour
+	// initialize signals
 	clk.write(false);
 	addr.write(0);
 	wdata.write(0);
@@ -69,6 +71,7 @@ uint32_t numLinesPerSet
 	mem_wdata.write(0);
 	mem_r.write(false);
 	mem_w.write(false);
+	hit.write(false);
 
     // initialize cache and main_memory
     CACHE cache("cache", numCacheLevels, cachelineSize, numLinesL1, numLinesL2, numLinesL3, latencyCacheL1, latencyCacheL2, latencyCacheL3, mappingStrategy, numLinesPerSet);
@@ -89,6 +92,7 @@ uint32_t numLinesPerSet
     cache.mem_wdata.bind(mem_wdata);
     cache.mem_r.bind(mem_r);
     cache.mem_w.bind(mem_w);
+	cache.hit.bind(hit);
 
     // bind main memory ports
     mainMemory.clk.bind(clk);
@@ -120,22 +124,24 @@ uint32_t numLinesPerSet
 	}
 
 	uint32_t cycleCount = 0;
-	Request current;
+	Request* current;
+	uint32_t cacheMisses = 0;
+	uint32_t cacheHits = 0;
 
     for (int i = 0; i < numRequests; i++) {
-     	current = requests[i];
+     	current = &requests[i];
 
-    	if (current.w) {
-    		std::cout << "Request " << i << ": WRITE 0x" << std::hex << current.data << " to 0x" << current.addr << std::dec << std::endl;
+    	if (current->w) {
+    		std::cout << "Request " << i << ": WRITE 0x" << std::hex << current->data << " to 0x" << current->addr << std::dec << std::endl;
     	} else {
-    		std::cout << "Request " << i << ": READ FROM 0x" << std::hex << current.addr << std::dec << std::endl;
+    		std::cout << "Request " << i << ": READ FROM 0x" << std::hex << current->addr << std::dec << std::endl;
     	}
 
         // write cache input ports
-      	addr.write(current.addr);
-        wdata.write(current.data);
-        w.write(current.w == 1);
-        r.write(current.w != 1);
+      	addr.write(current->addr);
+        wdata.write(current->data);
+        w.write(current->w == 1);
+        r.write(current->w != 1);
 
     	clock_tick(&clk, &cycleCount);
 
@@ -151,11 +157,21 @@ uint32_t numLinesPerSet
         	}
         } while (!ready.read());
 
+    	if (current->w != 1) {
+    		current->data = rdata.read();
+    	}
+
+    	if (cache.hit.read()) {
+    		cacheHits++;
+    	} else {
+    		cacheMisses++;
+    	}
+
     	cache.printCache();
 
-    	std::cout << "READ: " << std::hex << rdata.read() << std::dec << std::endl;
-
-    	std::cout << "CACHELINE test: " << std::hex << (int)cache.getCacheLineContent(1, 0, 0) << std::dec << std::endl;
+    	if (current->w) {
+    		std::cout << "DATA READ: " << std::hex << rdata.read() << std::dec << std::endl;
+    	}
     }
 
     sc_stop();
@@ -164,7 +180,7 @@ uint32_t numLinesPerSet
 		sc_close_vcd_trace_file(traceFilePtr);
 	}
 
-    return {cycleCount, 0, 0, 0};
+    return {cycleCount, cacheMisses, cacheHits, 42};
 }
 
 int sc_main(int argc, char* argv[])

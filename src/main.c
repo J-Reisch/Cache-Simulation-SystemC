@@ -11,7 +11,7 @@
 #include "request.h"
 #include "csv_parser.h"
 
-extern struct Result run_simulation (uint32_t cycles, const char* tracefile, uint8_t numCacheLevels, uint32_t cachelineSize, uint32_t numLinesL1, uint32_t numLinesL2, uint32_t numLinesL3, uint32_t latencyCacheL1, uint32_t latencyCacheL2, uint32_t latencyCacheL3, uint8_t mappingStrategy, uint32_t numRequests, struct Request* requests, uint32_t memoryLatency, uint32_t numLinesPerSet);
+extern struct Result run_simulation (uint32_t cycles, const char* tracefile, uint8_t numCacheLevels, uint32_t cachelineSize, uint32_t numLinesL1, uint32_t numLinesL2, uint32_t numLinesL3, uint32_t latencyCacheL1, uint32_t latencyCacheL2, uint32_t latencyCacheL3, uint8_t mappingStrategy, uint32_t numRequests, struct Request* requests);
 
 void print_help(const char* programName) {
       // TODO: update short options (inconsistent)
@@ -59,13 +59,49 @@ int string_to_uint8_t(const char *str, uint8_t *value) {
 }
 
 void run_tests() {
+    printf("Running tests...\n");
 
+    int numRequests;
+    struct Request* requests = parse_csv("test/test.csv", &numRequests);
+
+    struct Result test_res = run_simulation(10000, NULL, 2, 16,
+                                            4, 8, 16, 10,
+                                            20, 40, 2,
+                                            numRequests, requests);
+
+    for (int i = 0; i < numRequests; i++) {
+        printf("%i: %u\n", i, requests[i].data);
+    }
+
+    bool correct = true;
+    if (requests[1].data != 0xAAAAAAAA) {
+        fprintf(stderr, "Simple read/write test failed: Expected request 2 to have data 0xAAAAAAAA, but got %#x\n", requests[1].data);
+        correct = false;
+    }
+
+    if (requests[4].data != 0xBBBBBBBB) {
+        fprintf(stderr, "LRU test failed: Expected request 3 to have data 0xBBBBBBBB, but got %#x\n", requests[4].data);
+        correct = false;
+    }
+
+    if (requests[8].data != 0xEEDDDDDD) {
+        fprintf(stderr, "write to same line test failed: Expected request 9 to have data 0xEEDDDDDD, but got %#x\n", requests[8].data);
+        correct = false;
+    }
+
+
+    if (test_res.misses != 4) {
+        fprintf(stderr, "Expected 4 misses in total, but got %u\n", test_res.misses);
+        correct = false;
+    }
+
+    free(requests);
+    if (!correct) {
+        exit(EXIT_FAILURE);
+    } else {
+        printf("All tests passed!\n");
+    }
 }
-
-// TODO: use --test option
-// TODO: add tracefile
-// Bei Verwendung der Option --tf soll ein Tracefile erstellt werden. Das Tracefile soll alle
-//verwendeten Signale beinhalten
 
 int main(int argc, char *argv[]) {
 
@@ -80,8 +116,8 @@ int main(int argc, char *argv[]) {
     uint8_t mappingStrategy = 2; // 0 = direct-mapped, 1 = fully associative, 2 = set-associative
     const char *tracefile = NULL;
     char *inputFile = "test/example.csv";
-    uint32_t memoryLatency = 100;
-    uint32_t numLinesPerSet = 4;
+
+    int return_code = 0;
 
     const struct option long_options[] = {
         {"num-cache-levels", required_argument, NULL, 'n'},
@@ -94,8 +130,6 @@ int main(int argc, char *argv[]) {
         {"latency-cache-l3", required_argument, NULL, 'z'},
         {"mapping-strategy", required_argument, NULL, 'm'},
         {"cycles", required_argument, NULL, 'c'},
-        {"memory-latency", required_argument, NULL, 'l'},
-        {"num-lines-per-set", required_argument, NULL, 'p'},
         {"tf", required_argument, NULL, 'e'},
         {"help", no_argument, NULL, 'h'},
         {"test", no_argument, NULL, 't'},
@@ -103,7 +137,7 @@ int main(int argc, char *argv[]) {
     };
 
     int opt;
-    while ((opt = getopt_long(argc, argv, "n:s:u:v:w:x:y:z:m:c:l:p:e:h", long_options, NULL)) != -1) {
+    while ((opt = getopt_long(argc, argv, "n:s:u:v:w:x:y:z:m:c:e:h:t", long_options, NULL)) != -1) {
         switch (opt) {
             case 'n':
                 if (string_to_uint8_t(optarg, &numCacheLevels) || numCacheLevels < 1 || numCacheLevels > 3) {
@@ -157,16 +191,6 @@ int main(int argc, char *argv[]) {
                     return 1;
                 }
                 break;
-			case 'l':
-                if (string_to_uint32_t(optarg, &memoryLatency)) {
-                    return 1;
-                }
-                break;
-            case 'p':
-                if (string_to_uint32_t(optarg, &numLinesPerSet)) {
-                    return 1;
-                }
-                break;
             case 'e':
                 tracefile = optarg;
                 break;
@@ -187,7 +211,8 @@ int main(int argc, char *argv[]) {
     } else {
         fprintf(stderr, "Missing input file\n");
         print_usage_msg(programName);
-        return 1;
+        return_code = 1;
+        goto cleanup;
     }
 
     // Print parsed options
@@ -201,8 +226,6 @@ int main(int argc, char *argv[]) {
     printf("L3 Cache Latency: %u\n", latencyCacheL3);
     printf("Mapping Strategy: %u\n", mappingStrategy);
     printf("Cycles: %u\n", cycles);
-    printf("Memory Latency: %u\n", memoryLatency);
-    printf("Cache Lines Per Set: %u\n", numLinesPerSet);
     printf("Tracefile: %s\n", tracefile ? tracefile : "None");
     printf("Input File: %s\n", inputFile);
 
@@ -211,7 +234,8 @@ int main(int argc, char *argv[]) {
     // filename too long
     if (strlen(inputFile) > 255) {
       	fprintf(stderr, "Invalid options %s: input file name too long\n", programName);
-        return 1;
+        return_code = 1;
+        goto cleanup;
     }
 
     // illegal characters
@@ -219,7 +243,8 @@ int main(int argc, char *argv[]) {
     for (const char *c = inputFile; *c; ++c) {
         if (strchr(illegalCharacters, *c) != NULL) {
           	fprintf(stderr, "Invalid options %s: illegal characters in input file name\n", programName);
-            return 1;
+            return_code = 1;
+            goto cleanup;
         }
     }
 
@@ -228,16 +253,19 @@ int main(int argc, char *argv[]) {
         char illegalCharacters[] = {'\n' ,':', '"'};
         if (strlen(tracefile) == 0) {
             fprintf(stderr, "Invalid options %s: Trace file name is empty\n", programName);
-            return 1;
+            return_code = 1;
+            goto cleanup;
         }
         else if (tracefile[0] == '.') {
             fprintf(stderr, "Invalid options %s: Trace file name is invalid because filenames starting with dots are reserved for system files\n", programName);
-            return 1;
+            return_code = 1;
+            goto cleanup;
         }
         for (int i = 0; i < 3; i++) {
             if (strchr(tracefile, illegalCharacters[i]) != NULL) {
                 fprintf(stderr, "Invalid options %s: Trace file name contains illegal character \"%c\"\n", programName, illegalCharacters[i]);
-                return 1;
+                return_code = 1;
+                goto cleanup;
             }
         }
     }
@@ -249,12 +277,11 @@ int main(int argc, char *argv[]) {
     // TODO: implement test (call seperate function in seperate file and then terminate)
     if (cacheLineSize == 0) {
         fprintf(stderr, "size of cache line can't be zero");
-        return 1;
+        return_code = 1;
+        goto cleanup;
     }
 
     int numRequests;
-
-    // TODO: check if csv_parser works for edge cases
 
     struct Request* requests = parse_csv(inputFile, &numRequests);
 
@@ -268,14 +295,16 @@ int main(int argc, char *argv[]) {
     struct Result simu_res = run_simulation(cycles, tracefile, numCacheLevels, cacheLineSize,
                                             numLinesL1, numLinesL2, numLinesL3, latencyCacheL1,
                                             latencyCacheL2, latencyCacheL3, mappingStrategy,
-                                            numRequests, requests, memoryLatency, numLinesPerSet);
+                                            numRequests, requests);
 
     printf("Simulation Results:\n");
     printf("Cycles: %u\n", simu_res.cycles);
     printf("Hits: %u\n", simu_res.hits);
     printf("Misses: %u\n", simu_res.misses);
-    printf("Primitive Gate Count: %u\n", simu_res.primitiveGateCount);
 
-    free(requests); // TODO
-    return 0;
+    cleanup:
+        if (requests) {
+            free(requests);
+        }
+    return return_code;
 }

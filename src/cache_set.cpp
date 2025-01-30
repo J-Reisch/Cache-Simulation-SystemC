@@ -30,7 +30,7 @@ uint32_t CacheSet::read(uint32_t tag, uint32_t offset, bool* miss) {
         return line.read(offset);
     } else {
         *miss = true;
-        std::cout << "Line with this tag not in CacheSet" << std::endl;
+        // std::cout << "Line with this tag not in CacheSet" << std::endl;
         return 0;
     }
 }
@@ -39,13 +39,13 @@ void CacheSet::write(uint32_t tag, uint32_t offset, uint32_t wdata) {
     // check if line exists
     auto mapEntry = this->cacheMap.find(tag);
     if (mapEntry != this->cacheMap.end()) { // line exists
-        std::cout << "  Line in Cache" << std::endl;
+        // std::cout << "  Line in Cache" << std::endl;
         CacheLine& line = *(mapEntry->second);
         line.write(offset, wdata);
     } else { // cache miss (since there is a read() check first, this implies that the value did exist in no cache line and was loaded from RAM)
-        std::cout << "  Line not in Cache" << std::endl;
+        // std::cout << "  Line not in Cache" << std::endl;
         if (cacheLines.size() >= numLines) {
-            std::cout << "replace least recently used cache line" << std::endl;
+            // std::cout << "replace least recently used cache line" << std::endl;
             // remove LRU first
             auto lru = cacheLines.begin();
             uint32_t lruTag = (*lru).tag;
@@ -70,6 +70,6 @@ void CacheSet::access(uint32_t tag, uint32_t offset) {
         // Update the map to point to the new position
         mapEntry->second = std::prev(cacheLines.end());
     } else {
-        std::cout << "Access didn't work because CacheLine not in Level (shouldn't be possible!)" << std::endl;
+        std::cout << "Access didn't work because CacheLine not in Level (This should never be printed)" << std::endl;
     }
 }

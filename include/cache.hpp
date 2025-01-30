@@ -29,6 +29,7 @@ SC_MODULE(CACHE) {
     sc_out<uint32_t> mem_wdata;
     sc_out<bool> mem_r;
     sc_out<bool> mem_w;
+    sc_out<bool> hit; // necessary to track number of hits/misses in simulation.cpp
 
     struct LevelSignals {
         sc_signal<uint32_t> addr;
@@ -36,6 +37,7 @@ SC_MODULE(CACHE) {
         sc_signal<bool> r;
         sc_signal<bool> w;
         sc_signal<bool> access; // used to change order of LRU
+        sc_signal<uint8_t> numBytes;
 
         sc_signal<uint32_t> rdata;
         sc_signal<bool> ready;
@@ -63,13 +65,17 @@ SC_MODULE(CACHE) {
 
     uint32_t readFromRAM (uint32_t addr);
 
-    uint32_t readFromLevel(uint8_t level, uint32_t addr, bool* miss);
+    uint32_t readFromLevel(uint8_t level, uint32_t addr, bool* miss, uint8_t bytes);
 
-    void writeToLevel(uint8_t level, uint32_t addr, uint32_t data);
+    void writeToLevel(uint8_t level, uint32_t addr, uint32_t data, uint8_t bytes);
 
     void accessLevel(uint8_t level, uint32_t addr);
 
-    void cacheMiss(uint32_t address, bool read, bool write, uint32_t data);
+    void cacheMiss(uint32_t address, bool read, bool write, uint32_t data, uint8_t bytes);
+
+    uint32_t readFromCache(uint32_t address, uint8_t bytes);
+
+    void writeToCache(uint32_t address, uint8_t bytes);
 
     void printCache();
 

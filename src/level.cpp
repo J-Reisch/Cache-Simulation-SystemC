@@ -9,7 +9,6 @@
 #include "utils.hpp"
 
 LEVEL::LEVEL(sc_module_name name, uint32_t cacheLineSize, uint32_t numLines, uint32_t latency, uint8_t mappingStrategy, uint32_t numLinesPerSet)  {
-
     this->cacheLineSize = cacheLineSize;
     this->numLines = numLines;
     this->latency = latency;
@@ -20,7 +19,6 @@ LEVEL::LEVEL(sc_module_name name, uint32_t cacheLineSize, uint32_t numLines, uin
     if (mappingStrategy == 0) { // direct-mapped
         this->numLinesPerSet = 1;
     } else if (mappingStrategy == 1) { // fully associative
-        std::cout << "fully associative" << std::endl;
         this->numLinesPerSet = numLines;
     }
 
@@ -41,6 +39,7 @@ LEVEL::LEVEL(sc_module_name name, uint32_t cacheLineSize, uint32_t numLines, uin
 
     SC_THREAD(behaviour);
     sensitive << clk.pos();
+
 }
 
 void LEVEL::printLevel() {
@@ -86,10 +85,6 @@ void LEVEL::behaviour() {
             ready.write(true);
         } else if (w.read()) {
             ready.write(false);
-
-            // split address into Tag, Index, Offset
-            std::cout << "numOffSetBits " << (int)numOffsetBits << " numIndexBits" << (int)numIndexBits << " numTagBits" << (int)numTagBits << std::endl;
-            std::cout << "WRITING in LEVEL: 0x" << std::hex << tag << " 0x" << index << " 0x" << offset << std::dec << std::endl;
 
             // access according CacheSet
             auto mapEntry = this->cacheSets.find(index);
