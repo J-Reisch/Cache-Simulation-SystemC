@@ -271,7 +271,7 @@ void CACHE::behaviour() {
 
             ready.write(true);
         }
-        wait(); // TODO: necessary???
+        wait();
     }
 }
 

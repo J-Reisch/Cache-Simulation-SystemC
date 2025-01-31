@@ -1,14 +1,14 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdint.h>
-#include <stddef.h>
 #include <getopt.h>
 #include <string.h>
 #include <ctype.h>
 #include <stdbool.h>
+#include <errno.h>
 
-#include "result.h"
 #include "request.h"
+#include "result.h"
 #include "csv_parser.h"
 
 extern struct Result run_simulation (uint32_t cycles, const char* tracefile, uint8_t numCacheLevels, uint32_t cachelineSize, uint32_t numLinesL1, uint32_t numLinesL2, uint32_t numLinesL3, uint32_t latencyCacheL1, uint32_t latencyCacheL2, uint32_t latencyCacheL3, uint8_t mappingStrategy, uint32_t numRequests, struct Request* requests);
@@ -28,12 +28,10 @@ void print_help(const char* programName) {
           "  --latency-cache-l1 <num>        Latency of L1 cache\n"
           "  --latency-cache-l2 <num>        Latency of L2 cache\n"
           "  --latency-cache-l3 <num>        Latency of L3 cache\n"
-          "  -m, --mapping-strategy <num>    Mapping strategy (0-2)\n" // TODO: better explanation?
+          "  -m, --mapping-strategy <num>    Mapping strategy (0-2): 0 (direct-mapped), 1 (fully associative), or 2 (set-associative)\n"
           "  -c, --cycles <num>              The number of simulated cycles\n"
-          "  -t, --tf <tracefile>            Path to the trace file (no tracefile if the option is not set)\n"
-          "  -l, --memory-latency <num>      The latency for RAM (equal for read and write)\n"
-          "  -p, --num-lines-per-set <num>   For set-associative caches only\n" // TODO: one parameter per layer?
-          "  -h, --help                      Print this help message and exit"
+          "  -e, --tf <tracefile>            Path to the trace file (no tracefile if the option is not set)\n"
+          "  -h, --help                      Print this help message and exit\n"
           "  -t, --test                      Run tests and exit\n";
 
     fprintf(stderr, msg, programName);
@@ -48,14 +46,73 @@ void print_usage_msg(const char* programName) {
 
 int string_to_uint32_t(const char *str, uint32_t *value) {
     char *endptr;
-    *value = strtoul(str, &endptr, 10);
-    return (*endptr == '\0') ? 0 : 1;
+    errno = 0;
+    unsigned long val = strtoul(str, &endptr, 10);
+
+    if (errno == ERANGE || val > UINT32_MAX) {
+        return 1;
+    }
+
+    if (*endptr != '\0') {
+        return 1;
+    }
+
+    *value = (uint32_t)val;
+    return 0;
 }
 
 int string_to_uint8_t(const char *str, uint8_t *value) {
     char *endptr;
-    *value = strtoul(str, &endptr, 10);
-    return (*endptr == '\0') ? 0 : 1;
+    errno = 0;
+
+    unsigned long val = strtoul(str, &endptr, 10);
+
+    if (errno == ERANGE || val > UINT8_MAX) {
+        return 1;
+    }
+
+    if (*endptr != '\0') {
+        return 1;
+    }
+
+    *value = (uint8_t)val;
+    return 0;
+}
+
+bool is_valid_filename(const char *filename, const char *programName, const char *type) {
+    // NULL is okay (tracefile not specified)
+    if (filename == NULL) {
+        return true;
+    }
+
+    // check length
+    if (strlen(filename) > 255) {
+        fprintf(stderr, "Invalid options %s: %s file name too long\n", programName, type);
+        return false;
+    }
+
+    // check illegal characters
+    const char *illegalCharacters = "\n\r:*?\"<>|";
+    for (const char *c = filename; *c; ++c) {
+        if (strchr(illegalCharacters, *c) != NULL) {
+            fprintf(stderr, "Invalid options %s: %s file name contains illegal character \"%c\"\n", programName, type, *c);
+            return false;
+        }
+    }
+
+    // check if empty string
+    if (strlen(filename) == 0) {
+        fprintf(stderr, "Invalid options %s: %s file name is empty\n", programName, type);
+        return false;
+    }
+
+    // don't allow hidden files
+    if (filename[0] == '.') {
+        fprintf(stderr, "Invalid options %s: %s file name starts with dot\n", programName, type);
+        return false;
+    }
+
+    return true;
 }
 
 void run_tests() {
@@ -116,8 +173,8 @@ int main(int argc, char *argv[]) {
 
     const char* programName = argv[0];
 
-    // default values
-    uint32_t cycles = 1000;
+    // set default values
+    uint32_t cycles = 100000;
     uint8_t numCacheLevels = 1;
     uint32_t cacheLineSize = 16;
     uint32_t numLinesL1 = 16, numLinesL2 = 32, numLinesL3 = 64;
@@ -146,7 +203,7 @@ int main(int argc, char *argv[]) {
     };
 
     int opt;
-    while ((opt = getopt_long(argc, argv, "n:s:u:v:w:x:y:z:m:c:e:h:t", long_options, NULL)) != -1) {
+    while ((opt = getopt_long(argc, argv, "n:s:u:v:w:x:y:z:m:c:e:ht", long_options, NULL)) != -1) {
         switch (opt) {
             case 'n':
                 if (string_to_uint8_t(optarg, &numCacheLevels) || numCacheLevels < 1 || numCacheLevels > 3) {
@@ -156,47 +213,55 @@ int main(int argc, char *argv[]) {
                 break;
             case 's':
                 if (string_to_uint32_t(optarg, &cacheLineSize)) {
+                    fprintf(stderr, "Invalid value for --cacheline-size. Must be a decimal number between 0 and 4294967295.\n");
                     return 1;
                 }
                 break;
             case 'u':
                 if (string_to_uint32_t(optarg, &numLinesL1)) {
+                    fprintf(stderr, "Invalid value for --num-lines-l1. Must be a decimal number between 0 and 4294967295.\n");
                     return 1;
                 }
                 break;
             case 'v':
                 if (string_to_uint32_t(optarg, &numLinesL2)) {
+                    fprintf(stderr, "Invalid value for --num-lines-l2. Must be a decimal number between 0 and 4294967295.\n");
                     return 1;
                 }
                 break;
             case 'w':
                 if (string_to_uint32_t(optarg, &numLinesL3)) {
+                    fprintf(stderr, "Invalid value for --num-lines-l3. Must be a decimal number between 0 and 4294967295.\n");
                     return 1;
                 }
                 break;
             case 'x':
                 if (string_to_uint32_t(optarg, &latencyCacheL1)) {
+                    fprintf(stderr, "Invalid value for --latency-cache-l1. Must be a decimal number between 0 and 4294967295.\n");
                     return 1;
                 }
                 break;
             case 'y':
                 if (string_to_uint32_t(optarg, &latencyCacheL2)) {
+                    fprintf(stderr, "Invalid value for --latency-cache-l2. Must be a decimal number between 0 and 4294967295.\n");
                     return 1;
                 }
                 break;
             case 'z':
                 if (string_to_uint32_t(optarg, &latencyCacheL3)) {
+                    fprintf(stderr, "Invalid value for --latency-cache-l3. Must be a decimal number between 0 and 4294967295.\n");
                     return 1;
                 }
                 break;
             case 'm':
                 if (string_to_uint8_t(optarg, &mappingStrategy) || mappingStrategy > 2) {
-                    fprintf(stderr, "Invalid value for --mapping-strategy. Must be 0, 1, or 2.\n");
+                    fprintf(stderr, "Invalid value for --mapping-strategy. Must be 0 (direct-mapped), 1 (fully associative), or 2 (set-associative).\n");
                     return 1;
                 }
                 break;
             case 'c':
                 if (string_to_uint32_t(optarg, &cycles)) {
+                    fprintf(stderr, "Invalid value for --cycles. Must be a decimal number between 0 and 4294967295.\n");
                     return 1;
                 }
                 break;
@@ -218,7 +283,7 @@ int main(int argc, char *argv[]) {
     if (optind < argc) {
         inputFile = argv[optind]; // first positional argument is <file>
     } else {
-        fprintf(stderr, "Missing input file\n");
+        fprintf(stderr, "Invalid options %s: Missing input file\n", programName);
         print_usage_msg(programName);
         return_code = 1;
         goto cleanup;
@@ -238,52 +303,41 @@ int main(int argc, char *argv[]) {
     printf("Tracefile: %s\n", tracefile ? tracefile : "None");
     printf("Input File: %s\n", inputFile);
 
-    // Check if input file name is legal
-
-    // filename too long
-    if (strlen(inputFile) > 255) {
-      	fprintf(stderr, "Invalid options %s: input file name too long\n", programName);
+    // check if csv file name is legal
+    if (!is_valid_filename(inputFile, programName, "csv file")) {
         return_code = 1;
         goto cleanup;
     }
 
-    // illegal characters
-    const char *illegalCharacters = "\n\r:*?\"<>|";
-    for (const char *c = inputFile; *c; ++c) {
-        if (strchr(illegalCharacters, *c) != NULL) {
-          	fprintf(stderr, "Invalid options %s: illegal characters in input file name\n", programName);
-            return_code = 1;
-            goto cleanup;
-        }
+    // check if tracefile name is legal
+    if (!is_valid_filename(tracefile, programName, "Tracefile")) {
+        return_code = 1;
+        goto cleanup;
     }
 
-    // Check if tracefile name is legal
-    if (tracefile != NULL) {
-        char illegalCharacters[] = {'\n' ,':', '"'};
-        if (strlen(tracefile) == 0) {
-            fprintf(stderr, "Invalid options %s: Trace file name is empty\n", programName);
-            return_code = 1;
-            goto cleanup;
-        }
-        else if (tracefile[0] == '.') {
-            fprintf(stderr, "Invalid options %s: Trace file name is invalid because filenames starting with dots are reserved for system files\n", programName);
-            return_code = 1;
-            goto cleanup;
-        }
-        for (int i = 0; i < 3; i++) {
-            if (strchr(tracefile, illegalCharacters[i]) != NULL) {
-                fprintf(stderr, "Invalid options %s: Trace file name contains illegal character \"%c\"\n", programName, illegalCharacters[i]);
-                return_code = 1;
-                goto cleanup;
-            }
-        }
+    // check if the number of lines in each level can be divided by num-lines-per-set for each layer (for set-associative caches)
+    if (mappingStrategy == 2 && (numLinesL1 % NUM_LINES_PER_SET + numLinesL2 % NUM_LINES_PER_SET + numLinesL3 % NUM_LINES_PER_SET != 0)) {
+        fprintf(stderr, "Invalid options %s: the number of lines in each level must be a multiple of NUM_LINES_PER_SET\n", programName);
+        return_code = 1;
+        goto cleanup;
     }
 
-    // TODO: check if number of lines can be divided by numLinesPerSet for each layer
+    // check if lines of L1 <= L2 <= L3 (necessary to ensure inclusivity)
+    if ((numLinesL1 > numLinesL2 && numCacheLevels >= 2) || (numLinesL2 > numLinesL3 && numCacheLevels >= 3)) {
+        fprintf(stderr, "Invalid options %s: L1 should have less cache lines than L2 and L2 less than L3\n", programName);
+        return_code = 1;
+        goto cleanup;
+    }
 
-    // TODO: Check if cache is large enough and if all values make sense
+    // check if all levels have enough lines for at least one set (if set-associative), else at least one line
+    if (numLinesL1 < 1 || (mappingStrategy == 2 && numLinesL1 < NUM_LINES_PER_SET) ||
+        numLinesL2 < 1 || (mappingStrategy == 2 && numLinesL2 < NUM_LINES_PER_SET) ||
+        numLinesL3 < 1 || (mappingStrategy == 2 && numLinesL3 < NUM_LINES_PER_SET)) {
+        fprintf(stderr, "Invalid options %s: not all levels have enough cache lines\n", programName);
+        return_code = 1;
+        goto cleanup;
+    }
 
-    // TODO: implement test (call seperate function in seperate file and then terminate)
     if (cacheLineSize == 0) {
         fprintf(stderr, "size of cache line can't be zero");
         return_code = 1;

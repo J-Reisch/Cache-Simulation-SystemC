@@ -11,10 +11,6 @@
 #include "main_memory.hpp"
 #include "simulation.hpp"
 
-#define memoryLatency 100
-#define numLinesPerSet 2
-
-
 void clock_tick(sc_signal<bool> *clk, uint32_t *cycleCount) {
      clk->write(true);
      sc_start(1, SC_NS);
@@ -74,8 +70,8 @@ struct Request* requests
 	hit.write(false);
 
     // initialize cache and main_memory
-    CACHE cache("cache", numCacheLevels, cachelineSize, numLinesL1, numLinesL2, numLinesL3, latencyCacheL1, latencyCacheL2, latencyCacheL3, mappingStrategy, numLinesPerSet);
-    MAIN_MEMORY mainMemory("main_memory", memoryLatency);
+    CACHE cache("cache", numCacheLevels, cachelineSize, numLinesL1, numLinesL2, numLinesL3, latencyCacheL1, latencyCacheL2, latencyCacheL3, mappingStrategy, NUM_LINES_PER_SET);
+    MAIN_MEMORY mainMemory("main_memory", MEMORY_LATENCY);
 
     // bind cache ports
     cache.clk.bind(clk);
@@ -156,6 +152,10 @@ struct Request* requests
           		break;
         	}
         } while (!ready.read());
+
+    	if (cycleCount >= cycles) {
+    		break;
+    	}
 
     	if (current->w != 1) {
     		current->data = rdata.read();

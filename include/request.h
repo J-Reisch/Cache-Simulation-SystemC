@@ -2,11 +2,14 @@
 // Created by julian on 1/3/25.
 //
 
+#include <stdint.h>
+
+#define MEMORY_LATENCY 100
+#define NUM_LINES_PER_SET 2
+
 #ifdef __cplusplus
 extern "C" {
 #endif
-
-#include <stdint.h>
 
     struct Request {
         uint32_t addr;
