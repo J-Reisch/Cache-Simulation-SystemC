@@ -7,7 +7,6 @@
 
 #include <vector>
 #include <cstdint>
-#include <iostream>
 
 class CacheLine {
     std::vector<uint8_t> bytes; // Storage for the cache line data

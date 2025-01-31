@@ -15,11 +15,11 @@
 using namespace sc_core;
 
 SC_MODULE(LEVEL) {
-  	sc_in<bool> clk;
+	sc_in<bool> clk;
 	sc_in<uint32_t> addr;
 	sc_in<uint32_t> wdata;
-    sc_in<bool> w;
-    sc_in<bool> r;
+	sc_in<bool> w;
+	sc_in<bool> r;
 	sc_in<bool> access;
 	sc_in<uint8_t> numBytes;
 
@@ -38,14 +38,16 @@ SC_MODULE(LEVEL) {
 	uint8_t numIndexBits;
 	uint8_t numTagBits;
 
-	std::unordered_map<uint32_t, CacheSet> cacheSets;
+	std::unordered_map<uint32_t, CacheSet> cacheSets; // amortized constant time complexity
 
-    SC_HAS_PROCESS(LEVEL);
-    LEVEL(sc_module_name name, uint32_t cacheLineSize, uint32_t numLines, uint32_t latency, uint8_t mappingStrategy, uint32_t numLinesPerSet);
+	SC_HAS_PROCESS(LEVEL);
+
+	LEVEL(sc_module_name name, uint32_t cacheLineSize, uint32_t numLines, uint32_t latency, uint8_t mappingStrategy,
+	      uint32_t numLinesPerSet);
 
 	void printLevel();
 
-    void behaviour();
+	void behaviour();
 
 	uint8_t getCacheLineContentOfLevel(uint32_t address);
 };

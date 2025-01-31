@@ -11,11 +11,11 @@
 extern "C" {
 #endif
 
-    struct Request {
-        uint32_t addr;
-        uint32_t data;
-        uint8_t w;
-    };
+struct Request {
+    uint32_t addr;
+    uint32_t data;
+    uint8_t w;
+};
 
 #ifdef __cplusplus
 }

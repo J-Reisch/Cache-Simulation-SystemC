@@ -14,7 +14,7 @@ CPP_OBJS = $(CPP_SRCS:.cpp=.o)
 TARGET := project
 
 # SystemC path (one level above the project)
-SCPATH = ../systemc
+SCPATH = $(SYSTEMC_HOME)
 
 # Compiler and linker flags
 

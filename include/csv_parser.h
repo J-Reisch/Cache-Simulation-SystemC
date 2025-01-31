@@ -7,6 +7,6 @@
 
 #include <stddef.h>
 
-struct Request* parse_csv(const char* filename, int* numRequests);
+struct Request *parse_csv(const char *filename, int *numRequests);
 
 #endif //CSV_PARSER_H

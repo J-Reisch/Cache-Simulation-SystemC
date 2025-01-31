@@ -8,7 +8,7 @@ adapted version of the example solution of the MAIN_MEMORY homework which is use
 
 #include "main_memory.hpp"
 
-MAIN_MEMORY::MAIN_MEMORY (sc_module_name name, uint32_t memoryLatency) {
+MAIN_MEMORY::MAIN_MEMORY(sc_module_name name, uint32_t memoryLatency) {
     latency = memoryLatency;
 
     SC_THREAD(behaviour);
@@ -16,7 +16,7 @@ MAIN_MEMORY::MAIN_MEMORY (sc_module_name name, uint32_t memoryLatency) {
 }
 
 void MAIN_MEMORY::behaviour() {
-    while(true) {
+    while (true) {
         wait();
 
         if (r.read()) {
@@ -32,7 +32,7 @@ void MAIN_MEMORY::doRead() {
 
     uint32_t result = get(addr.read());
 
-    for(int i = 0; i < latency; i++) {
+    for (int i = 0; i < latency; i++) {
         wait();
     }
 
@@ -44,7 +44,7 @@ void MAIN_MEMORY::doWrite() {
     ready.write(false);
     set(addr.read(), wdata.read());
 
-    for(int i = 0; i < latency; i++) {
+    for (int i = 0; i < latency; i++) {
         wait();
     }
 
@@ -57,7 +57,7 @@ uint32_t MAIN_MEMORY::get(uint32_t address) {
 
     for (int i = 0; i < 4; i++) {
         uint8_t value = 0;
-        if(memory.find(address + i) != memory.end()) {
+        if (memory.find(address + i) != memory.end()) {
             value = memory[address + i];
         }
         result |= value << (i * 8);
@@ -71,7 +71,7 @@ void MAIN_MEMORY::set(uint32_t address, uint32_t value) {
     // Little Endian
     for (int i = 0; i < 4; i++) {
         memory[address + i] = (value >> (i * 8)) & 0xFF;
-        if(address + i == UINT32_MAX) {
+        if (address + i == UINT32_MAX) {
             break;
         }
     }

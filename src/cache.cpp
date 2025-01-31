@@ -10,7 +10,9 @@
 #include "utils.hpp"
 
 
-CACHE::CACHE(sc_module_name name, uint8_t numCacheLevels, uint32_t cacheLineSize, uint32_t numLinesL1, uint32_t numLinesL2, uint32_t numLinesL3, uint32_t latencyCacheL1, uint32_t latencyCacheL2, uint32_t latencyCacheL3, uint8_t mappingStrategy, uint32_t numLinesPerSet): sc_module(name),
+CACHE::CACHE(sc_module_name name, uint8_t numCacheLevels, uint32_t cacheLineSize, uint32_t numLinesL1,
+             uint32_t numLinesL2, uint32_t numLinesL3, uint32_t latencyCacheL1, uint32_t latencyCacheL2,
+             uint32_t latencyCacheL3, uint8_t mappingStrategy, uint32_t numLinesPerSet): sc_module(name),
     l1("l1", cacheLineSize, numLinesL1, latencyCacheL1, mappingStrategy, numLinesPerSet),
     l2("l2", cacheLineSize, numLinesL2, latencyCacheL2, mappingStrategy, numLinesPerSet),
     l3("l3", cacheLineSize, numLinesL3, latencyCacheL3, mappingStrategy, numLinesPerSet) {
@@ -107,7 +109,8 @@ uint32_t CACHE::readFromRAM(uint32_t addr) {
     return result;
 }
 
-uint32_t CACHE::readFromLevel(uint8_t level, uint32_t addr, bool* miss) { // level is between 1 and 3
+uint32_t CACHE::readFromLevel(uint8_t level, uint32_t addr, bool *miss) {
+    // level is between 1 and 3
     levelSignals[level].addr.write(addr);
 
     levelSignals[level].r.write(true);
@@ -130,7 +133,7 @@ void CACHE::writeToLevel(uint8_t level, uint32_t addr, uint32_t data, uint8_t by
     levelSignals[level].addr.write(addr);
     levelSignals[level].wdata.write(data);
     levelSignals[level].numBytes.write(bytes);
-    std::cout << "write to level " << (int)level << " data: " << data << " bytes: " << (int)bytes << std::endl;
+    //std::cout << "write to level " << std::hex << (int)level << " data: " << data << " bytes: " << (int)bytes << std::dec << std::endl;
 
     levelSignals[level].w.write(true);
     wait();
@@ -155,7 +158,7 @@ void CACHE::accessLevel(uint8_t level, uint32_t addr) {
 
 void CACHE::cacheMiss(uint32_t address, bool read, bool write, uint32_t data, uint8_t bytes) {
     hit.write(false);
-    std::cout << "CACHE MISS " <<std::endl;
+    std::cout << "CACHE MISS " << std::endl;
     if (write) {
         // write new data to RAM before loading the cache line
         writeToRAM(address, data);
@@ -185,7 +188,7 @@ uint32_t CACHE::readFromCache(uint32_t address, uint32_t data, uint8_t bytes) {
         result = readFromLevel(i, address, &miss);
         if (!miss) {
             // access remaining cache lines
-            for (int j = i+1; j < numCacheLevels; j++) {
+            for (int j = i + 1; j < numCacheLevels; j++) {
                 accessLevel(j, address);
             }
             break;
@@ -214,7 +217,8 @@ void CACHE::writeToCache(uint32_t address, uint32_t data, uint8_t bytes) {
             break;
         }
         if (i == numCacheLevels - 1) {
-            cacheMiss(address, read, write, data, bytes); // write data to RAM and then load cache line from RAM in L1, L2, L3
+            cacheMiss(address, read, write, data, bytes);
+            // write data to RAM and then load cache line from RAM in L1, L2, L3
         }
     }
 }
@@ -223,15 +227,19 @@ void CACHE::printCache() {
     std::cout << "------ CACHE BEGIN ------" << std::endl;
     std::cout << "L1: " << std::endl;
     l1.printLevel();
-    std::cout << "L2: " << std::endl;
-    l2.printLevel();
-    std::cout << "L3: " << std::endl;
-    l3.printLevel();
+    if (numCacheLevels > 1) {
+        std::cout << "L2: " << std::endl;
+        l2.printLevel();
+    }
+    if (numCacheLevels > 2) {
+        std::cout << "L3: " << std::endl;
+        l3.printLevel();
+    }
     std::cout << "------ CACHE END --------" << std::endl;
 }
 
 void CACHE::behaviour() {
-    while(true) {
+    while (true) {
         // save input signals
         address = addr.read();
         write = w.read();
@@ -250,7 +258,8 @@ void CACHE::behaviour() {
 
             uint32_t result;
             if (acrossLines) {
-                result = mergeData(readFromCache(address, 0, bytesToRight), readFromCache(address + bytesToRight, 0, 4 - bytesToRight), bytesToRight);
+                result = mergeData(readFromCache(address, 0, bytesToRight),
+                                   readFromCache(address + bytesToRight, 0, 4 - bytesToRight), bytesToRight);
             } else {
                 result = readFromCache(address, 0, 4);
             }
@@ -284,7 +293,7 @@ uint8_t CACHE::getCacheLineContent(uint32_t level, uint32_t lineIndex, uint32_t 
     } else if (level == 3) {
         return l3.getCacheLineContentOfLevel(lineIndex * cacheLineSize + index);
     } else {
-        std::cout << "Doesn't exist" << std::endl;
+        std::cerr << "Error (getCacheLineContent): level has to be between 1 and 3" << std::endl;
         return 0;
     }
 }

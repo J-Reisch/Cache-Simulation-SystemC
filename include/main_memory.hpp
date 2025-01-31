@@ -24,12 +24,13 @@ SC_MODULE(MAIN_MEMORY) {
     sc_out<uint32_t> rdata;
     sc_out<bool> ready;
 
-   	uint32_t latency;
+    uint32_t latency;
 
     std::map<uint32_t, uint8_t> memory;
 
     SC_HAS_PROCESS(MAIN_MEMORY);
-    MAIN_MEMORY (sc_module_name name, uint32_t memoryLatency);
+
+    MAIN_MEMORY(sc_module_name name, uint32_t memoryLatency);
 
     void behaviour();
 

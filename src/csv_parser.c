@@ -11,7 +11,7 @@
 // Function to parse a csv file and return the requests
 #define MAX_LINE_LENGTH 1024
 
-struct Request* parse_csv(const char* filename, int* numRequests) {
+struct Request *parse_csv(const char *filename, int *numRequests) {
     FILE *file = fopen(filename, "r");
     if (file == NULL) {
         fprintf(stderr, "parser: Could not open file %s\n", filename);
@@ -19,11 +19,11 @@ struct Request* parse_csv(const char* filename, int* numRequests) {
     }
 
     char line[MAX_LINE_LENGTH];
-    struct Request* requests = NULL;
+    struct Request *requests = NULL;
     *numRequests = 0;
 
     while (fgets(line, sizeof(line), file)) {
-        char* token;
+        char *token;
         struct Request request;
 
         // Parse operation type

@@ -8,7 +8,8 @@
 #include "level.hpp"
 #include "utils.hpp"
 
-LEVEL::LEVEL(sc_module_name name, uint32_t cacheLineSize, uint32_t numLines, uint32_t latency, uint8_t mappingStrategy, uint32_t numLinesPerSet)  {
+LEVEL::LEVEL(sc_module_name name, uint32_t cacheLineSize, uint32_t numLines, uint32_t latency, uint8_t mappingStrategy,
+             uint32_t numLinesPerSet) {
     this->cacheLineSize = cacheLineSize;
     this->numLines = numLines;
     this->latency = latency;
@@ -16,30 +17,24 @@ LEVEL::LEVEL(sc_module_name name, uint32_t cacheLineSize, uint32_t numLines, uin
     this->numLinesPerSet = numLinesPerSet;
 
     // direct-mapped caches have one line per set, fully associative caches have only one set
-    if (mappingStrategy == 0) { // direct-mapped
+    if (mappingStrategy == 0) {
+        // direct-mapped
         this->numLinesPerSet = 1;
-    } else if (mappingStrategy == 1) { // fully associative
+    } else if (mappingStrategy == 1) {
+        // fully associative
         this->numLinesPerSet = numLines;
     }
 
     this->numCacheSets = numLines / this->numLinesPerSet; // 1 in case of fully associative
-    // calculate number of offset Bits (same for all levels since cacheLineSize is same)
+    // calculate number of offset Bits
     this->numOffsetBits = log2_int(cacheLineSize); // cacheLineSize is always power of 2
-    // calculate number of index Bits for each level (first calculate number of cache-Sets (numLinesLX / this->numLinesPerSet))
-    this->numIndexBits = log2_int(numCacheSets); // TODO: what to do with remainder? (there should be no remainder when parameters are specified correctly)
-    // calculate number of tag Bits for each level (32 - index Bits of level - offset Bits)
+    // calculate number of index Bits
+    this->numIndexBits = log2_int(numCacheSets);
+    // calculate number of tag Bits (32 - index Bits of level - offset Bits)
     this->numTagBits = 32 - numOffsetBits - numIndexBits;
-
-    /*
-    std::cout << "NEW LAYER CREATED" << std::endl;
-    std::cout << "numOffsetBits = " << (int)numOffsetBits << std::endl;
-    std::cout << "numIndexBits = " << (int)numIndexBits << std::endl;
-    std::cout << "numTagBits = " << (int)numTagBits << std::endl;
-    */
 
     SC_THREAD(behaviour);
     sensitive << clk.pos();
-
 }
 
 void LEVEL::printLevel() {
@@ -54,7 +49,7 @@ void LEVEL::printLevel() {
 }
 
 void LEVEL::behaviour() {
-    while(true) {
+    while (true) {
         uint32_t tag = (addr >> numOffsetBits) >> numIndexBits; // shifts have to be < 32 Bits
         uint32_t index = ((addr << numTagBits) >> numTagBits) >> numOffsetBits;
         uint32_t offset = ((((addr << numTagBits) << numIndexBits) >> numTagBits) >> numIndexBits);
@@ -65,7 +60,7 @@ void LEVEL::behaviour() {
             auto mapEntry = this->cacheSets.find(index);
             if (mapEntry != this->cacheSets.end()) {
                 miss.write(false);
-                CacheSet& set = mapEntry->second;
+                CacheSet &set = mapEntry->second;
                 bool missInSet = false;
                 uint32_t data = set.read(tag, offset, &missInSet);
                 if (missInSet) {
@@ -89,7 +84,7 @@ void LEVEL::behaviour() {
             // access according CacheSet
             auto mapEntry = this->cacheSets.find(index);
             if (mapEntry != this->cacheSets.end()) {
-                CacheSet& set = mapEntry->second;
+                CacheSet &set = mapEntry->second;
                 set.write(tag, offset, wdata, numBytes.read());
             } else {
                 // create CacheSet
@@ -106,10 +101,10 @@ void LEVEL::behaviour() {
             // find according CacheSet
             auto mapEntry = this->cacheSets.find(index);
             if (mapEntry != this->cacheSets.end()) {
-                CacheSet& set = mapEntry->second;
+                CacheSet &set = mapEntry->second;
                 set.access(tag, offset);
             } else {
-                std::cout << "Access didn't work because CacheSet of needed CacheLine not in Level (shouldn't be possible!)" << std::endl;
+                std::cerr << "Error: cache levels are not inclusive!" << std::endl;
             }
         }
         wait();
@@ -122,15 +117,15 @@ uint8_t LEVEL::getCacheLineContentOfLevel(uint32_t address) {
     uint32_t offset = ((((address << numTagBits) << numIndexBits) >> numTagBits) >> numIndexBits);
     auto mapEntry = this->cacheSets.find(index);
     if (mapEntry != this->cacheSets.end()) {
-        CacheSet& set = mapEntry->second;
+        CacheSet &set = mapEntry->second;
         bool missInSet = false;
-        uint32_t data = (set.read(tag, offset, &missInSet) << 24) >> 24;
+        uint32_t data = (set.read(tag, offset, &missInSet) << 24) >> 24; // extract only one byte (least significant)
         if (missInSet) {
-            std::cout << "Doesn't exist!" << std::endl;
+            std::cerr << "Error (getCacheLineContent): Line doesn't exist!" << std::endl;
             return 0;
         }
         return static_cast<uint8_t>(data);
     }
-    std::cout << "Doesn't exist!" << std::endl;
+    std::cerr << "Error (getCacheLineContent): Set doesn't exist!" << std::endl;
     return 0;
 }

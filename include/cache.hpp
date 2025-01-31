@@ -59,13 +59,16 @@ SC_MODULE(CACHE) {
     uint32_t data;
 
     SC_HAS_PROCESS(CACHE);
-    CACHE(sc_module_name name, uint8_t numCacheLevels, uint32_t cacheLineSize, uint32_t numLinesL1, uint32_t numLinesL2, uint32_t numLinesL3, uint32_t latencyCacheL1, uint32_t latencyCacheL2, uint32_t latencyCacheL3, uint8_t mappingStrategy, uint32_t numLinesPerSet);
 
-    void writeToRAM (uint32_t addr, uint32_t data);
+    CACHE(sc_module_name name, uint8_t numCacheLevels, uint32_t cacheLineSize, uint32_t numLinesL1, uint32_t numLinesL2,
+          uint32_t numLinesL3, uint32_t latencyCacheL1, uint32_t latencyCacheL2, uint32_t latencyCacheL3,
+          uint8_t mappingStrategy, uint32_t numLinesPerSet);
 
-    uint32_t readFromRAM (uint32_t addr);
+    uint32_t readFromRAM(uint32_t addr);
 
-    uint32_t readFromLevel(uint8_t level, uint32_t addr, bool* miss);
+    void writeToRAM(uint32_t addr, uint32_t data);
+
+    uint32_t readFromLevel(uint8_t level, uint32_t addr, bool *miss);
 
     void writeToLevel(uint8_t level, uint32_t addr, uint32_t data, uint8_t bytes);
 
