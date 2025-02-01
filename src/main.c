@@ -357,8 +357,8 @@ int main(int argc, char *argv[]) {
     }
 
     // check if size of cache line is valid
-    if (cacheLineSize == 0) {
-        fprintf(stderr, "Invalid options %s: size of cache line can't be zero", programName);
+    if (cacheLineSize < 4) {
+        fprintf(stderr, "Invalid options %s: size of cache line has to be at least 4", programName);
         return_code = 1;
         goto cleanup;
     }

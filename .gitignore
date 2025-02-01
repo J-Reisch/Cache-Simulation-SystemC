@@ -9,6 +9,7 @@
 !*.sh
 !*.md
 !*.csv
+!*.py
 
 !Makefile
 
