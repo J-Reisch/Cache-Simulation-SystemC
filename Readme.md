@@ -1,3 +1,5 @@
+I developed this three-level cache simulator as part of the "Grundlagenpraktikum Rechnerarchitektur" (Computer Architecture Lab) at TUM. The project implements a cycle-based SystemC/C++ simulation of a three-layer cache hierarchy, including multiple replacement and mapping strategies. The following is the original German Readme which describes the implementation and results in more detail.
+
 # Cache-Simulation mit SystemC
 
 In den letzten Jahrzehnten stieg die Geschwindigkeit von CPUs deutlich schneller als die von RAM, wodurch Prozesse lange auf Daten warten müssen (Von-Neumann-Flaschenhals). Caches beschleunigen den Zugriff, indem sie häufig genutzte Daten in einem kleinen, schnellen Zwischenspeicher bereithalten.
@@ -75,11 +77,6 @@ Untersucht wurde der Einfluss der Cache-Level und der Mapping-Strategie auf Hits
 | **set-associative (3 Level)**   |   66176    |     384      | 2M        |
 
 Wie erwartet schneiden set-associative Caches besser ab als direct-mapped, aber schlechter als fully associative Caches. Bei 3 Levels wurde die gesamte Matrix in den Cache geladen, sodass nur beim ersten Zugriff Misses auftraten.
-
-## Aufgabenverteilung
-
-- **Julian Reisch:** `run_simulation`, Cache-Implementierung, Tests, Projektbericht
-- **Manar Ajir:** Rahmenprogramm, Folien
 
 ## Quellen
 
